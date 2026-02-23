@@ -173,3 +173,6 @@ docker-volumes/
 # Temporary files
 *.tmp
 *.temp
+
+# Docker configs
+backend/docker/pgadmin/servers.json

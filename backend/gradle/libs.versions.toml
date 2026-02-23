@@ -1,0 +1,20 @@
+[versions]
+# Версии инструментов и библиотек
+java = "25"
+springBoot = "4.0.3"
+dependencyManagement = "1.1.7"
+
+[libraries]
+# Базовые библиотеки
+spring-boot-starter = { group = "org.springframework.boot", name = "spring-boot-starter", version.ref = "springBoot" }
+spring-boot-starter-test = { group = "org.springframework.boot", name = "spring-boot-starter-test", version.ref = "springBoot" }
+junit-launcher = { group = "org.junit.platform", name = "junit-platform-launcher" }
+
+[bundles]
+# Группировка зависимостей
+spring-base = ["spring-boot-starter"]
+
+[plugins]
+# Плагины
+spring-boot = { id = "org.springframework.boot", version.ref = "springBoot" }
+spring-dependency-management = { id = "io.spring.dependency-management", version.ref = "dependencyManagement" }
