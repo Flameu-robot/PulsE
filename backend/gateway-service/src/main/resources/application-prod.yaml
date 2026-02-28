@@ -1,0 +1,31 @@
+spring:
+  cloud:
+    gateway:
+      server:
+        webflux:
+          default-filters:
+            - DedupeResponseHeader=Access-Control-Allow-Credentials Access-Control-Allow-Origin
+          globalcors:
+            cors-configurations:
+              '[/**]':
+                allowed-origins: "https://your-domain.com"
+                allowed-methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"]
+                allowed-headers: ["Authorization", "Content-Type"]
+                allow-credentials: true
+                max-age: 3600
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: "health,info,prometheus"
+  endpoint:
+    health:
+      show-details: when_authorized
+    gateway:
+      access: read_only
+
+logging:
+  level:
+    root: INFO
+    org.springframework.cloud.gateway: WARN
