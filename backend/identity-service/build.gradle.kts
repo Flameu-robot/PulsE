@@ -20,11 +20,11 @@ dependencies {
 	implementation(libs.bundles.jwt)
 	implementation(libs.bundles.webauthn)
 	implementation(libs.bundles.database)
+	implementation(libs.bundles.kafka)
 
 	implementation(libs.spring.boot.starter.data.jpa)
 	implementation(libs.spring.boot.starter.data.redis)
 	implementation(libs.spring.boot.starter.mail)
-	implementation(libs.spring.kafka)
 	implementation(libs.minio)
 	implementation(libs.springdoc.openapi.webmvc.ui)
 	implementation(libs.mapstruct)

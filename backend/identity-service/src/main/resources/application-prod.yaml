@@ -1,0 +1,30 @@
+spring:
+  config:
+    activate:
+      on-profile: prod
+
+  datasource:
+    url: jdbc:postgresql://postgres:5432/identity_db
+    username: ${POSTGRES_USER:postgres}
+    password: ${POSTGRES_PASSWORD:postgres}
+    driver-class-name: org.postgresql.Driver
+
+  jpa:
+    show-sql: false
+    properties:
+      hibernate:
+        format_sql: false
+
+  flyway:
+    clean-disabled: true
+
+  kafka:
+    bootstrap-servers: kafka:9092
+    admin:
+      auto-create: false
+
+logging:
+  level:
+    root: INFO
+    com.example: INFO
+    org.hibernate: WARN

@@ -9,8 +9,6 @@ spring:
     open-in-view: false
     properties:
       hibernate:
-        format_sql: true
-        default_schema: identity
         jdbc:
           time_zone: UTC
           batch_size: 25
@@ -20,16 +18,15 @@ spring:
   flyway:
     enabled: true
     baseline-on-migrate: true
-    schemas:
-      - identity
     locations:
       - classpath:db/migration
 
   jackson:
-    serialization:
-      write-dates-as-timestamps: false
+    date-format: "yyyy-MM-dd'T'HH:mm:ss.SSSZ"
     default-property-inclusion: non_null
     time-zone: UTC
+    deserialization:
+      fail-on-unknown-properties: false
 
   kafka:
     producer:
@@ -37,6 +34,16 @@ spring:
       value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
       acks: all
       retries: 3
+      properties:
+        enable.idempotence: true
+        spring.json.add.type.headers: true
+    consumer:
+      group-id: identity-group
+      auto-offset-reset: earliest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+      properties:
+        group.protocol: consumer
     template:
       default-topic: identity-events
 
