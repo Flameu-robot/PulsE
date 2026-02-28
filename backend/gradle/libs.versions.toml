@@ -1,20 +1,98 @@
 [versions]
-# Версии инструментов и библиотек
-java = "25"
-springBoot = "4.0.3"
-dependencyManagement = "1.1.7"
+java                    = "25"
+springBoot              = "4.0.3"
+dependencyManagement    = "1.1.7"
+jjwt                    = "0.12.6"
+webauthn                = "2.5.3"
+minio                   = "8.5.14"
+springdoc               = "2.8.4"
+mapstruct               = "1.6.3"
+hypersistence           = "3.9.0"
+testcontainers          = "1.20.4"
+lombok                  = "1.18.36"
+
 
 [libraries]
-# Базовые библиотеки
-spring-boot-starter = { group = "org.springframework.boot", name = "spring-boot-starter", version.ref = "springBoot" }
-spring-boot-starter-test = { group = "org.springframework.boot", name = "spring-boot-starter-test", version.ref = "springBoot" }
-junit-launcher = { group = "org.junit.platform", name = "junit-platform-launcher" }
+spring-boot-starter                         = { group = "org.springframework.boot", name = "spring-boot-starter",                         version.ref = "springBoot" }
+spring-boot-starter-web                     = { group = "org.springframework.boot", name = "spring-boot-starter-web",                     version.ref = "springBoot" }
+spring-boot-starter-security                = { group = "org.springframework.boot", name = "spring-boot-starter-security",                version.ref = "springBoot" }
+spring-boot-starter-oauth2-resource-server  = { group = "org.springframework.boot", name = "spring-boot-starter-oauth2-resource-server",  version.ref = "springBoot" }
+spring-boot-starter-oauth2-client           = { group = "org.springframework.boot", name = "spring-boot-starter-oauth2-client",           version.ref = "springBoot" }
+spring-boot-starter-data-jpa                = { group = "org.springframework.boot", name = "spring-boot-starter-data-jpa",               version.ref = "springBoot" }
+spring-boot-starter-data-redis              = { group = "org.springframework.boot", name = "spring-boot-starter-data-redis",             version.ref = "springBoot" }
+spring-boot-starter-validation              = { group = "org.springframework.boot", name = "spring-boot-starter-validation",             version.ref = "springBoot" }
+spring-boot-starter-actuator                = { group = "org.springframework.boot", name = "spring-boot-starter-actuator",               version.ref = "springBoot" }
+spring-boot-starter-mail                    = { group = "org.springframework.boot", name = "spring-boot-starter-mail",                   version.ref = "springBoot" }
+spring-boot-starter-websocket               = { group = "org.springframework.boot", name = "spring-boot-starter-websocket",             version.ref = "springBoot" }
+spring-boot-configuration-processor         = { group = "org.springframework.boot", name = "spring-boot-configuration-processor",       version.ref = "springBoot" }
+spring-kafka                                = { group = "org.springframework.kafka", name = "spring-kafka" }
+postgresql                                  = { group = "org.postgresql",    name = "postgresql" }
+flyway-core                                 = { group = "org.flywaydb",      name = "flyway-core" }
+flyway-postgresql                           = { group = "org.flywaydb",      name = "flyway-database-postgresql" }
+jjwt-api                                    = { group = "io.jsonwebtoken", name = "jjwt-api",     version.ref = "jjwt" }
+jjwt-impl                                   = { group = "io.jsonwebtoken", name = "jjwt-impl",    version.ref = "jjwt" }
+jjwt-jackson                                = { group = "io.jsonwebtoken", name = "jjwt-jackson",  version.ref = "jjwt" }
+webauthn-server-core                        = { group = "com.yubico", name = "webauthn-server-core",        version.ref = "webauthn" }
+webauthn-server-attestation                 = { group = "com.yubico", name = "webauthn-server-attestation",  version.ref = "webauthn" }
+minio                                       = { group = "io.minio", name = "minio", version.ref = "minio" }
+springdoc-openapi-webmvc-ui                 = { group = "org.springdoc", name = "springdoc-openapi-starter-webmvc-ui", version.ref = "springdoc" }
+micrometer-prometheus                       = { group = "io.micrometer", name = "micrometer-registry-prometheus" }
+lombok                                      = { group = "org.projectlombok", name = "lombok", version.ref = "lombok" }
+mapstruct                                   = { group = "org.mapstruct", name = "mapstruct",           version.ref = "mapstruct" }
+mapstruct-processor                         = { group = "org.mapstruct", name = "mapstruct-processor",  version.ref = "mapstruct" }
+hypersistence-utils                         = { group = "io.hypersistence", name = "hypersistence-utils-hibernate-63", version.ref = "hypersistence" }
+spring-boot-starter-test                    = { group = "org.springframework.boot",  name = "spring-boot-starter-test",  version.ref = "springBoot" }
+spring-security-test                        = { group = "org.springframework.security", name = "spring-security-test" }
+spring-kafka-test                           = { group = "org.springframework.kafka",    name = "spring-kafka-test" }
+junit-launcher                              = { group = "org.junit.platform",           name = "junit-platform-launcher" }
+testcontainers-junit                        = { group = "org.testcontainers", name = "junit-jupiter",  version.ref = "testcontainers" }
+testcontainers-postgresql                   = { group = "org.testcontainers", name = "postgresql",     version.ref = "testcontainers" }
+testcontainers-kafka                        = { group = "org.testcontainers", name = "kafka",          version.ref = "testcontainers" }
+
 
 [bundles]
-# Группировка зависимостей
-spring-base = ["spring-boot-starter"]
+
+spring-base = [
+    "spring-boot-starter",
+    "spring-boot-starter-web",
+    "spring-boot-starter-validation",
+    "spring-boot-starter-actuator",
+]
+
+spring-security = [
+    "spring-boot-starter-security",
+    "spring-boot-starter-oauth2-resource-server",
+    "spring-boot-starter-oauth2-client",
+]
+
+jwt = [
+    "jjwt-api",
+    "jjwt-impl",
+    "jjwt-jackson",
+]
+
+webauthn = [
+    "webauthn-server-core",
+    "webauthn-server-attestation",
+]
+
+database = [
+    "flyway-core",
+    "flyway-postgresql",
+]
+
+testcontainers = [
+    "testcontainers-junit",
+    "testcontainers-postgresql",
+    "testcontainers-kafka",
+]
+
+testing = [
+    "spring-boot-starter-test",
+    "spring-security-test",
+    "spring-kafka-test",
+]
 
 [plugins]
-# Плагины
-spring-boot = { id = "org.springframework.boot", version.ref = "springBoot" }
-spring-dependency-management = { id = "io.spring.dependency-management", version.ref = "dependencyManagement" }
+spring-boot                 = { id = "org.springframework.boot",          version.ref = "springBoot" }
+spring-dependency-management = { id = "io.spring.dependency-management",  version.ref = "dependencyManagement" }

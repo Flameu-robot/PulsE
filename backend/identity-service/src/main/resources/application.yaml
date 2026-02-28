@@ -1,4 +1,67 @@
 spring:
   application:
-    name: "identity-service"
+    name: identity-service
 
+  profiles:
+    active: dev
+
+  jpa:
+    open-in-view: false
+    properties:
+      hibernate:
+        format_sql: true
+        default_schema: identity
+        jdbc:
+          time_zone: UTC
+          batch_size: 25
+        order_inserts: true
+        order_updates: true
+
+  flyway:
+    enabled: true
+    baseline-on-migrate: true
+    schemas:
+      - identity
+    locations:
+      - classpath:db/migration
+
+  jackson:
+    serialization:
+      write-dates-as-timestamps: false
+    default-property-inclusion: non_null
+    time-zone: UTC
+
+  kafka:
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+      acks: all
+      retries: 3
+    template:
+      default-topic: identity-events
+
+server:
+  port: 8081
+  shutdown: graceful
+
+jwt:
+  access-token:
+    expiration: 900000
+  refresh-token:
+    expiration: 2592000000
+
+app:
+  kafka:
+    topics:
+      user-created: user.created
+      user-updated: user.updated
+      user-banned: user.banned
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+  endpoint:
+    health:
+      show-details: when_authorized
