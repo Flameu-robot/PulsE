@@ -14,9 +14,11 @@ java {
 }
 
 dependencies {
-    implementation(libs.spring.boot.starter)
-    testImplementation(libs.spring.boot.starter.test)
-    testRuntimeOnly(libs.junit.launcher)
+    implementation(platform(libs.spring.cloud.dependencies))
+
+    implementation(libs.bundles.gateway)
+
+    annotationProcessor(libs.spring.boot.configuration.processor)
 }
 
 tasks.withType<Test> {

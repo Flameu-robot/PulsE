@@ -10,6 +10,7 @@ mapstruct               = "1.6.3"
 hypersistence           = "3.9.0"
 testcontainers          = "1.20.4"
 lombok                  = "1.18.36"
+springCloud             = "2025.1.1"
 
 
 [libraries]
@@ -24,6 +25,8 @@ spring-boot-starter-validation              = { group = "org.springframework.boo
 spring-boot-starter-actuator                = { group = "org.springframework.boot", name = "spring-boot-starter-actuator",               version.ref = "springBoot" }
 spring-boot-starter-mail                    = { group = "org.springframework.boot", name = "spring-boot-starter-mail",                   version.ref = "springBoot" }
 spring-boot-starter-websocket               = { group = "org.springframework.boot", name = "spring-boot-starter-websocket",             version.ref = "springBoot" }
+spring-cloud-starter-gateway                = { group = "org.springframework.cloud", name = "spring-cloud-starter-gateway-server-webflux" }
+spring-cloud-dependencies                   = { group = "org.springframework.cloud", name = "spring-cloud-dependencies",                version.ref = "springCloud" }
 spring-boot-configuration-processor         = { group = "org.springframework.boot", name = "spring-boot-configuration-processor",       version.ref = "springBoot" }
 spring-kafka                                = { group = "org.springframework.kafka", name = "spring-kafka" }
 postgresql                                  = { group = "org.postgresql",    name = "postgresql" }
@@ -91,6 +94,11 @@ testing = [
     "spring-boot-starter-test",
     "spring-security-test",
     "spring-kafka-test",
+]
+
+gateway = [
+    "spring-cloud-starter-gateway",
+    "spring-boot-starter-actuator",
 ]
 
 [plugins]
