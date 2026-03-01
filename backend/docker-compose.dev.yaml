@@ -39,8 +39,8 @@ services:
     image: minio/minio
     container_name: pulse-minio
     ports:
-      - "9000:9000" # API
-      - "9001:9001" # UI
+      - "9000:9000"
+      - "9001:9001"
     environment:
       MINIO_ROOT_USER: minioadmin
       MINIO_ROOT_PASSWORD: minioadmin
@@ -54,8 +54,6 @@ services:
   redis:
     image: redis:7-alpine
     container_name: pulse-redis
-    profiles:
-      - redis
     ports:
       - "6379:6379"
     volumes:
@@ -66,14 +64,22 @@ services:
   redis-insight:
     image: redis/redisinsight:latest
     container_name: pulse-redis-insight
-    profiles:
-      - redis
     ports:
       - "8001:8001"
     environment:
       - RI_APP_PORT=8001
     depends_on:
       - redis
+    networks:
+      - pulse-net
+
+  # MailHog + UI
+  mailhog:
+    image: mailhog/mailhog:latest
+    container_name: pulse-mailhog
+    ports:
+      - "1025:1025"   # SMTP
+      - "8025:8025"   # Web UI
     networks:
       - pulse-net
 

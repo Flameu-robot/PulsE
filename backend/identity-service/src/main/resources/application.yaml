@@ -56,15 +56,6 @@ spring:
           max-idle: 4
           min-idle: 1
 
-  mail:
-    properties:
-      mail:
-        smtp:
-          auth: true
-          starttls:
-            enable: true
-            required: true
-
   security:
     oauth2:
       client:
@@ -79,6 +70,8 @@ server:
   shutdown: graceful
 
 jwt:
+  secret: ${JWT_SECRET:dev-super-secret-key-that-is-at-least-256-bits-long-for-hmac-sha256-algorithm}
+  issuer: ${JWT_ISSUER:pulse-identity}
   access-token:
     expiration: 900000
   refresh-token:
