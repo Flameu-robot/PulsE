@@ -65,6 +65,7 @@ public class User {
     private String bio;
 
     @Column(columnDefinition = "jsonb")
+    @org.hibernate.annotations.JdbcTypeCode(org.hibernate.type.SqlTypes.JSON)
     @Builder.Default
     private String metadata = "{}";
 
