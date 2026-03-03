@@ -8,6 +8,7 @@ class IdentityServiceApplicationTests {
 
 	@Test
 	void contextLoads() {
+
 	}
 
 }

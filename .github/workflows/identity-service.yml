@@ -35,14 +35,15 @@ jobs:
         run: chmod +x gradlew
 
       - name: Run Checkstyle
-        run: ./gradlew :identity-service:checkstyleMain || true
+        run: ./gradlew :identity-service:checkstyleMain
+        continue-on-error: true
 
       - name: Publish Checkstyle Report
-        uses: scacap/action-checkstyle@v2
+        uses: jwgmeligmeyling/checkstyle-github-action@v1
         with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          checkstyle_xml: 'backend/identity-service/build/reports/checkstyle/main.xml'
-          level: warning 
+          path: 'backend/identity-service/build/reports/checkstyle/main.xml'
+          token: ${{ secrets.GITHUB_TOKEN }}
+          name: Checkstyle Annotations
 
       - name: Build project
         run: ./gradlew :identity-service:build -x test
