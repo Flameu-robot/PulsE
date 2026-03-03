@@ -9,7 +9,7 @@ springdoc               = "2.8.4"
 mapstruct               = "1.6.3"
 hypersistence           = "3.9.0"
 testcontainers          = "1.20.4"
-lombok                  = "1.18.36"
+lombok                  = "1.18.42"
 springCloud             = "2025.1.1"
 
 
