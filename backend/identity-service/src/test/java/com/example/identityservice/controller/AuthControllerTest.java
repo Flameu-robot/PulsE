@@ -174,10 +174,10 @@ class AuthControllerTest {
     class Logout {
 
         @Test
-        @DisplayName("should return 403 without token")
-        void shouldReturn403WithoutToken() throws Exception {
+        @DisplayName("should return 401 without token")
+        void shouldReturn401WithoutToken() throws Exception {
             mockMvc.perform(post("/api/auth/logout"))
-                    .andExpect(status().isForbidden());
+                    .andExpect(status().isUnauthorized());
         }
     }
 }
