@@ -18,7 +18,7 @@ jobs:
     
     defaults:
       run:
-        working-directory: ./backend/identity-service
+        working-directory: ./backend
 
     steps:
       - name: Checkout code
@@ -30,19 +30,19 @@ jobs:
           java-version: '21'
           distribution: 'temurin'
           cache: 'gradle'
-          cache-dependency-path: backend/identity-service/*.gradle*
+          cache-dependency-path: backend/gradle/libs.versions.toml
 
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
 
       - name: Run Checkstyle
-        run: ./gradlew checkstyleMain checkstyleTest
+        run: ./gradlew :identity-service:checkstyleMain :identity-service:checkstyleTest
 
       - name: Build project
-        run: ./gradlew build -x test
+        run: ./gradlew :identity-service:build -x test
 
       - name: Run tests
-        run: ./gradlew test
+        run: ./gradlew :identity-service:test
         env:
           SPRING_PROFILES_ACTIVE: test
 
