@@ -24,6 +24,17 @@ spring:
       - org.springframework.boot.data.redis.autoconfigure.DataRedisReactiveAutoConfiguration
       - org.springframework.boot.kafka.autoconfigure.KafkaAutoConfiguration
 
+  security:
+    oauth2:
+      client:
+        registration:
+          google:
+            client-id: test-google-id
+            client-secret: test-google-secret
+          github:
+            client-id: test-github-id
+            client-secret: test-github-secret
+
 jwt:
   secret: test-super-secret-key-that-is-at-least-256-bits-long-for-hmac-sha256-algorithm
   issuer: pulse-identity-test
@@ -31,6 +42,12 @@ jwt:
     expiration: 900000
   refresh-token:
     expiration: 2592000000
+
+app:
+  oauth2:
+    authorized-redirect-uris:
+      - http://localhost:3000/oauth2/redirect
+    default-redirect-uri: http://localhost:3000/oauth2/redirect
 
 management:
   health:
