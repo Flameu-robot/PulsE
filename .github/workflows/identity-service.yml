@@ -37,6 +37,12 @@ jobs:
       - name: Run Checkstyle
         run: ./gradlew :identity-service:checkstyleMain
 
+      - name: Publish Checkstyle Report
+        uses: mikepenz/action-checkstyle@v1
+        with:
+          report_xml: 'backend/identity-service/build/reports/checkstyle/main.xml'
+          fail_on_error: false 
+
       - name: Build project
         run: ./gradlew :identity-service:build -x test
 

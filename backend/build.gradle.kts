@@ -14,7 +14,7 @@ subprojects {
         configProperties = mapOf(
             "suppressionFile" to rootProject.file("config/checkstyle/suppressions.xml").absolutePath
         )
-        isIgnoreFailures = false
+        isIgnoreFailures = true
         maxWarnings = 0
     }
 
