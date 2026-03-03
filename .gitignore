@@ -176,3 +176,7 @@ docker-volumes/
 
 # Docker configs
 backend/docker/pgadmin/servers.json
+
+# Custom Profiles
+application-local.yaml
+application-local.yml

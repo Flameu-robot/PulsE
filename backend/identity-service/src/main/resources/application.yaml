@@ -4,6 +4,8 @@ spring:
 
   profiles:
     active: dev
+    include:
+      - local
 
   jpa:
     open-in-view: false
@@ -83,6 +85,13 @@ app:
       user-created: user.created
       user-updated: user.updated
       user-banned: user.banned
+
+  oauth2:
+        # Разрешённые URL фронтенда для redirect после OAuth
+    authorized-redirect-uris:
+          - http://localhost:3000/oauth2/redirect
+        # Дефолтный redirect если не указан
+    default-redirect-uri: http://localhost:3000/oauth2/redirect
 
 management:
   endpoints:

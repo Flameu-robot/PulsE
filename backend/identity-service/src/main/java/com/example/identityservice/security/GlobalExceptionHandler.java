@@ -1,4 +1,4 @@
-package com.example.identityservice;
+package com.example.identityservice.security;
 
 
 import exception.base.BaseException;

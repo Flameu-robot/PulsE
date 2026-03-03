@@ -22,7 +22,6 @@ spring:
       - org.springframework.boot.mail.autoconfigure.MailSenderAutoConfiguration
       - org.springframework.boot.data.redis.autoconfigure.DataRedisAutoConfiguration
       - org.springframework.boot.data.redis.autoconfigure.DataRedisReactiveAutoConfiguration
-      - org.springframework.boot.security.oauth2.client.autoconfigure.OAuth2ClientAutoConfiguration
       - org.springframework.boot.kafka.autoconfigure.KafkaAutoConfiguration
 
 jwt:
