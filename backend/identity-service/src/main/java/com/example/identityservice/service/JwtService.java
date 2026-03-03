@@ -11,6 +11,7 @@ import javax.crypto.SecretKey;
 import java.nio.charset.StandardCharsets;
 import java.util.Date;
 import java.util.Map;
+import java.util.UUID;
 
 @Service
 public class JwtService {
@@ -84,6 +85,7 @@ public class JwtService {
         return Jwts.builder()
                 .issuer(jwtProperties.issuer())
                 .subject(username)
+                .id(UUID.randomUUID().toString())
                 .claim("userId", userId)
                 .claims(claims)
                 .issuedAt(now)

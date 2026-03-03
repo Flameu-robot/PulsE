@@ -42,6 +42,7 @@ dependencies {
 
 	testImplementation(libs.bundles.testing)
 	testImplementation(libs.bundles.testcontainers)
+	testImplementation(libs.spring.boot.starter.webmvc.test)
 	testRuntimeOnly(libs.junit.launcher)
 	testCompileOnly(libs.lombok)
 	testAnnotationProcessor(libs.lombok)
