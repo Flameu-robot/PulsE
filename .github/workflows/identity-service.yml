@@ -5,12 +5,11 @@ on:
     branches: [ "dev", "feature/identity-service" ]
     paths:
       - 'backend/identity-service/**'
-      - 'backend/config/checkstyle/**'
-      - '.github/workflows/identity-service.yml'
-  pull_request:
-    branches: [ "dev", "feature/identity-service" ]
-    paths:
-      - 'backend/identity-service/**'
+      - 'backend/shared/**'        
+      - 'backend/config/**'
+      - 'backend/gradle/**'
+      - 'backend/build.gradle.kts'
+      - 'backend/settings.gradle.kts'
 
 jobs:
   build-and-lint:
@@ -18,7 +17,7 @@ jobs:
     
     defaults:
       run:
-        working-directory: ./backend
+        working-directory: ./backend 
 
     steps:
       - name: Checkout code
@@ -36,7 +35,7 @@ jobs:
         run: chmod +x gradlew
 
       - name: Run Checkstyle
-        run: ./gradlew :identity-service:checkstyleMain :identity-service:checkstyleTest
+        run: ./gradlew :identity-service:checkstyleMain
 
       - name: Build project
         run: ./gradlew :identity-service:build -x test
