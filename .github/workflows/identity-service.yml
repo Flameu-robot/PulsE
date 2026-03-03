@@ -38,10 +38,11 @@ jobs:
         run: ./gradlew :identity-service:checkstyleMain
 
       - name: Publish Checkstyle Report
-        uses: mikepenz/action-checkstyle@v1
+        uses: mikepenz/checkstyle-action@v0.2.0
         with:
-          report_xml: 'backend/identity-service/build/reports/checkstyle/main.xml'
-          fail_on_error: false 
+          report_file: 'backend/identity-service/build/reports/checkstyle/main.xml'
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          fail_on_error: false
 
       - name: Build project
         run: ./gradlew :identity-service:build -x test
