@@ -93,6 +93,12 @@ app:
         # Дефолтный redirect если не указан
     default-redirect-uri: http://localhost:3000/oauth2/redirect
 
+  webauthn:
+    rp-id: localhost
+    rp-name: Pulse
+    origin: http://localhost:3000
+    timeout: 60000
+
 management:
   endpoints:
     web:

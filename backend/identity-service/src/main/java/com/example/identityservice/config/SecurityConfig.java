@@ -50,7 +50,8 @@ public class SecurityConfig {
                                 "/api/auth/login",
                                 "/api/auth/refresh",
                                 "/api/auth/password/forgot",
-                                "/api/auth/password/reset"
+                                "/api/auth/password/reset",
+                                "/api/auth/webauthn/login/**"
                         ).permitAll()
 
                         .requestMatchers(

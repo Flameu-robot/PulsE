@@ -5,6 +5,8 @@ import jakarta.persistence.*;
 import lombok.*;
 
 import java.time.OffsetDateTime;
+import java.util.LinkedHashSet;
+import java.util.Set;
 import java.util.UUID;
 
 @Entity
@@ -40,9 +42,16 @@ public class WebAuthnCredential {
     @Builder.Default
     private long signCount = 0L;
 
+    @ElementCollection(fetch = FetchType.EAGER)
+    @CollectionTable(
+            name = "webauth_transports",
+            joinColumns = @JoinColumn(name = "credential_id"),
+            foreignKey = @ForeignKey(name = "fk_webauth_transports_credential")
+    )
     @Enumerated(EnumType.STRING)
-    @Column(length = 50)
-    private Transport transports;
+    @Column(name = "transport", length = 20)
+    @Builder.Default
+    private Set<Transport> transports = new LinkedHashSet<>();
 
     private UUID aaguid;
 
@@ -65,5 +74,4 @@ public class WebAuthnCredential {
     public int hashCode() {
         return getClass().hashCode();
     }
-
 }

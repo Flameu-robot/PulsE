@@ -19,8 +19,6 @@ spring:
 
   autoconfigure:
     exclude:
-      - org.springframework.boot.data.redis.autoconfigure.DataRedisAutoConfiguration
-      - org.springframework.boot.data.redis.autoconfigure.DataRedisReactiveAutoConfiguration
       - org.springframework.boot.kafka.autoconfigure.KafkaAutoConfiguration
 
   mail:
@@ -51,6 +49,12 @@ app:
     authorized-redirect-uris:
       - http://localhost:3000/oauth2/redirect
     default-redirect-uri: http://localhost:3000/oauth2/redirect
+
+  webauthn:
+    rp-id: localhost
+    rp-name: Pulse Test
+    origin: http://localhost:3000
+    timeout: 60000
 
 management:
   health:

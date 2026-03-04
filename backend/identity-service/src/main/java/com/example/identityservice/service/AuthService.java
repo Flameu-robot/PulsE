@@ -18,16 +18,13 @@ import exception.auth.UserAlreadyExistsException;
 import exception.auth.UserNotFoundException;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.security.authentication.AuthenticationManager;
-import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
 import java.time.OffsetDateTime;
-import java.util.HexFormat;
 
 @Service
 public class AuthService {
@@ -37,19 +34,22 @@ public class AuthService {
     private final JwtService jwtService;
     private final PasswordEncoder passwordEncoder;
     private final AuthenticationManager authenticationManager;
+    private final AuthResponseFactory authResponseFactory;
 
     public AuthService(
             UserRepository userRepository,
             TokenRepository refreshTokenRepository,
             JwtService jwtService,
             PasswordEncoder passwordEncoder,
-            AuthenticationManager authenticationManager
+            AuthenticationManager authenticationManager,
+            AuthResponseFactory authResponseFactory
     ) {
         this.userRepository = userRepository;
         this.refreshTokenRepository = refreshTokenRepository;
         this.jwtService = jwtService;
         this.passwordEncoder = passwordEncoder;
         this.authenticationManager = authenticationManager;
+        this.authResponseFactory = authResponseFactory;
     }
 
     @Transactional
@@ -71,7 +71,7 @@ public class AuthService {
 
         user = userRepository.save(user);
 
-        return createAuthResponse(user, httpRequest);
+        return authResponseFactory.create(user, httpRequest);
     }
 
     @Transactional
@@ -98,7 +98,7 @@ public class AuthService {
         user.setLastLoginAt(OffsetDateTime.now());
         userRepository.save(user);
 
-        return createAuthResponse(user, httpRequest);
+        return authResponseFactory.create(user, httpRequest);
     }
 
     @Transactional
@@ -113,7 +113,7 @@ public class AuthService {
             throw new TokenException("Token is not a refresh token");
         }
 
-        String tokenHash = hashToken(rawToken);
+        String tokenHash = authResponseFactory.hashToken(rawToken);
         RefreshToken storedToken = refreshTokenRepository.findByTokenHash(tokenHash)
                 .orElseThrow(() -> new TokenException("Refresh token not found"));
 
@@ -126,7 +126,7 @@ public class AuthService {
 
         User user = storedToken.getUser();
 
-        return createAuthResponse(user, null);
+        return authResponseFactory.create(user, null);
     }
 
     @Transactional
@@ -143,39 +143,6 @@ public class AuthService {
                 .orElseThrow(() -> new UserNotFoundException(username));
 
         refreshTokenRepository.revokeAllByUserId(user.getId());
-    }
-
-    private AuthResponse createAuthResponse(User user, HttpServletRequest httpRequest) {
-        String accessToken = jwtService.generateAccessToken(
-                user.getId(),
-                user.getUsername(),
-                user.getRole().name()
-        );
-
-        String refreshToken = jwtService.generateRefreshToken(
-                user.getId(),
-                user.getUsername()
-        );
-
-        RefreshToken tokenEntity = RefreshToken.builder()
-                .user(user)
-                .tokenHash(hashToken(refreshToken))
-                .expiresAt(OffsetDateTime.now().plusSeconds(
-                        jwtService.getRefreshTokenExpiration() / 1000
-                ))
-                .userAgent(httpRequest != null ? httpRequest.getHeader("User-Agent") : null)
-                .ipAddress(httpRequest != null ? httpRequest.getRemoteAddr() : null)
-                .build();
-
-        refreshTokenRepository.save(tokenEntity);
-
-        return new AuthResponse(
-                accessToken,
-                refreshToken,
-                user.getId(),
-                user.getUsername(),
-                user.getRole().name()
-        );
     }
 
     @Transactional
@@ -209,15 +176,5 @@ public class AuthService {
                 user.getCreatedAt(),
                 user.getLastLoginAt()
         );
-    }
-
-    private String hashToken(String token) {
-        try {
-            MessageDigest digest = MessageDigest.getInstance("SHA-256");
-            byte[] hash = digest.digest(token.getBytes());
-            return HexFormat.of().formatHex(hash);
-        } catch (NoSuchAlgorithmException e) {
-            throw new RuntimeException("SHA-256 not available", e);
-        }
     }
 }

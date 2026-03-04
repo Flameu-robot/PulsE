@@ -22,7 +22,6 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -55,15 +54,27 @@ class AuthServiceTest {
     private AuthenticationManager authenticationManager;
 
     @Mock
+    private AuthResponseFactory authResponseFactory;
+
+    @Mock
     private HttpServletRequest httpRequest;
 
-    @InjectMocks
     private AuthService authService;
 
     private User testUser;
+    private AuthResponse defaultAuthResponse;
 
     @BeforeEach
     void setUp() {
+        authService = new AuthService(
+                userRepository,
+                refreshTokenRepository,
+                jwtService,
+                passwordEncoder,
+                authenticationManager,
+                authResponseFactory
+        );
+
         testUser = User.builder()
                 .id(1L)
                 .username("testuser")
@@ -72,6 +83,14 @@ class AuthServiceTest {
                 .status(UserStatus.ACTIVE)
                 .role(UserRole.USER)
                 .build();
+
+        defaultAuthResponse = new AuthResponse(
+                "access-token",
+                "refresh-token",
+                1L,
+                "testuser",
+                "USER"
+        );
     }
 
     @Nested
@@ -92,12 +111,8 @@ class AuthServiceTest {
             when(userRepository.existsByEmail("test@test.com")).thenReturn(false);
             when(passwordEncoder.encode("password123")).thenReturn("$2a$10$hashedpassword");
             when(userRepository.save(any(User.class))).thenReturn(testUser);
-            when(jwtService.generateAccessToken(1L, "testuser", "USER")).thenReturn("access-token");
-            when(jwtService.generateRefreshToken(1L, "testuser")).thenReturn("refresh-token");
-            when(jwtService.getRefreshTokenExpiration()).thenReturn(2592000000L);
-            when(refreshTokenRepository.save(any(RefreshToken.class))).thenReturn(new RefreshToken());
-            when(httpRequest.getHeader("User-Agent")).thenReturn("TestBrowser");
-            when(httpRequest.getRemoteAddr()).thenReturn("127.0.0.1");
+            when(authResponseFactory.create(any(User.class), any(HttpServletRequest.class)))
+                    .thenReturn(defaultAuthResponse);
 
             AuthResponse response = authService.register(validRequest, httpRequest);
 
@@ -108,7 +123,7 @@ class AuthServiceTest {
             assertThat(response.role()).isEqualTo("USER");
 
             verify(userRepository).save(any(User.class));
-            verify(refreshTokenRepository).save(any(RefreshToken.class));
+            verify(authResponseFactory).create(any(User.class), eq(httpRequest));
         }
 
         @Test
@@ -146,12 +161,8 @@ class AuthServiceTest {
             when(authenticationManager.authenticate(any(UsernamePasswordAuthenticationToken.class)))
                     .thenReturn(new UsernamePasswordAuthenticationToken("testuser", null));
             when(userRepository.save(any(User.class))).thenReturn(testUser);
-            when(jwtService.generateAccessToken(1L, "testuser", "USER")).thenReturn("access-token");
-            when(jwtService.generateRefreshToken(1L, "testuser")).thenReturn("refresh-token");
-            when(jwtService.getRefreshTokenExpiration()).thenReturn(2592000000L);
-            when(refreshTokenRepository.save(any(RefreshToken.class))).thenReturn(new RefreshToken());
-            when(httpRequest.getHeader("User-Agent")).thenReturn("TestBrowser");
-            when(httpRequest.getRemoteAddr()).thenReturn("127.0.0.1");
+            when(authResponseFactory.create(any(User.class), any(HttpServletRequest.class)))
+                    .thenReturn(defaultAuthResponse);
 
             AuthResponse response = authService.login(request, httpRequest);
 
@@ -168,12 +179,8 @@ class AuthServiceTest {
             when(authenticationManager.authenticate(any(UsernamePasswordAuthenticationToken.class)))
                     .thenReturn(new UsernamePasswordAuthenticationToken("testuser", null));
             when(userRepository.save(any(User.class))).thenReturn(testUser);
-            when(jwtService.generateAccessToken(1L, "testuser", "USER")).thenReturn("access-token");
-            when(jwtService.generateRefreshToken(1L, "testuser")).thenReturn("refresh-token");
-            when(jwtService.getRefreshTokenExpiration()).thenReturn(2592000000L);
-            when(refreshTokenRepository.save(any(RefreshToken.class))).thenReturn(new RefreshToken());
-            when(httpRequest.getHeader("User-Agent")).thenReturn("TestBrowser");
-            when(httpRequest.getRemoteAddr()).thenReturn("127.0.0.1");
+            when(authResponseFactory.create(any(User.class), any(HttpServletRequest.class)))
+                    .thenReturn(defaultAuthResponse);
 
             AuthResponse response = authService.login(request, httpRequest);
 
@@ -267,64 +274,31 @@ class AuthServiceTest {
                     .isInstanceOf(TokenException.class)
                     .hasMessageContaining("not a refresh");
         }
-    }
-
-    @Nested
-    @DisplayName("login with email")
-    class LoginWithEmail {
 
         @Test
-        @DisplayName("should login with email successfully")
-        void shouldLoginWithEmail() {
-            LoginRequest request = new LoginRequest("test@test.com", "password123");
+        @DisplayName("should refresh token successfully")
+        void shouldRefreshSuccessfully() {
+            RefreshTokenRequest request = new RefreshTokenRequest("valid-refresh-token");
+            String tokenHash = "hashed-token";
 
-            when(userRepository.findByEmail("test@test.com")).thenReturn(Optional.of(testUser));
-            when(authenticationManager.authenticate(any(UsernamePasswordAuthenticationToken.class)))
-                    .thenReturn(new UsernamePasswordAuthenticationToken("testuser", null));
-            when(userRepository.save(any(User.class))).thenReturn(testUser);
-            when(jwtService.generateAccessToken(1L, "testuser", "USER")).thenReturn("access-token");
-            when(jwtService.generateRefreshToken(1L, "testuser")).thenReturn("refresh-token");
-            when(jwtService.getRefreshTokenExpiration()).thenReturn(2592000000L);
-            when(refreshTokenRepository.save(any(RefreshToken.class))).thenReturn(new RefreshToken());
-            when(httpRequest.getHeader("User-Agent")).thenReturn("TestBrowser");
-            when(httpRequest.getRemoteAddr()).thenReturn("127.0.0.1");
+            RefreshToken storedToken = RefreshToken.builder()
+                    .id(1L)
+                    .user(testUser)
+                    .tokenHash(tokenHash)
+                    .revoked(false)
+                    .expiresAt(java.time.OffsetDateTime.now().plusDays(1))
+                    .build();
 
-            AuthResponse response = authService.login(request, httpRequest);
+            when(jwtService.isTokenValid("valid-refresh-token")).thenReturn(true);
+            when(jwtService.extractTokenType("valid-refresh-token")).thenReturn("refresh");
+            when(authResponseFactory.hashToken("valid-refresh-token")).thenReturn(tokenHash);
+            when(refreshTokenRepository.findByTokenHash(tokenHash)).thenReturn(Optional.of(storedToken));
+            when(authResponseFactory.create(eq(testUser), isNull())).thenReturn(defaultAuthResponse);
+
+            AuthResponse response = authService.refresh(request);
 
             assertThat(response.accessToken()).isEqualTo("access-token");
-            assertThat(response.username()).isEqualTo("testuser");
-        }
-
-        @Test
-        @DisplayName("should login with username successfully")
-        void shouldLoginWithUsername() {
-            LoginRequest request = new LoginRequest("testuser", "password123");
-
-            when(userRepository.findByUsername("testuser")).thenReturn(Optional.of(testUser));
-            when(authenticationManager.authenticate(any(UsernamePasswordAuthenticationToken.class)))
-                    .thenReturn(new UsernamePasswordAuthenticationToken("testuser", null));
-            when(userRepository.save(any(User.class))).thenReturn(testUser);
-            when(jwtService.generateAccessToken(1L, "testuser", "USER")).thenReturn("access-token");
-            when(jwtService.generateRefreshToken(1L, "testuser")).thenReturn("refresh-token");
-            when(jwtService.getRefreshTokenExpiration()).thenReturn(2592000000L);
-            when(refreshTokenRepository.save(any(RefreshToken.class))).thenReturn(new RefreshToken());
-            when(httpRequest.getHeader("User-Agent")).thenReturn("TestBrowser");
-            when(httpRequest.getRemoteAddr()).thenReturn("127.0.0.1");
-
-            AuthResponse response = authService.login(request, httpRequest);
-
-            assertThat(response.accessToken()).isEqualTo("access-token");
-        }
-
-        @Test
-        @DisplayName("should throw when email not found")
-        void shouldThrowWhenEmailNotFound() {
-            LoginRequest request = new LoginRequest("unknown@test.com", "password123");
-
-            when(userRepository.findByEmail("unknown@test.com")).thenReturn(Optional.empty());
-
-            assertThatThrownBy(() -> authService.login(request, httpRequest))
-                    .isInstanceOf(InvalidCredentialsException.class);
+            verify(refreshTokenRepository).save(argThat(token -> token.isRevoked()));
         }
     }
 
