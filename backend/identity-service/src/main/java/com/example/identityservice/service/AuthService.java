@@ -65,7 +65,7 @@ public class AuthService {
                 .username(request.username())
                 .email(request.email())
                 .passwordHash(passwordEncoder.encode(request.password()))
-                .status(UserStatus.ACTIVE)
+                .status(UserStatus.PENDING)
                 .role(UserRole.USER)
                 .build();
 

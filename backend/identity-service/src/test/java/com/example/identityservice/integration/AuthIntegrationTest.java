@@ -14,6 +14,7 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -207,6 +208,103 @@ class AuthIntegrationTest {
         mockMvc.perform(post("/api/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(oldLoginBody))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    @Order(7)
+    @DisplayName("should get own profile")
+    void shouldGetOwnProfile() throws Exception {
+        RegisterRequest register = new RegisterRequest("profileuser", "profile@test.com", "password123");
+        MvcResult result = mockMvc.perform(post("/api/auth/register")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(register)))
+                .andExpect(status().isCreated())
+                .andReturn();
+
+        AuthResponse response = objectMapper.readValue(
+                result.getResponse().getContentAsString(), AuthResponse.class
+        );
+
+        mockMvc.perform(get("/api/users/me")
+                        .header("Authorization", "Bearer " + response.accessToken()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.username").value("profileuser"))
+                .andExpect(jsonPath("$.email").value("profile@test.com"));
+    }
+
+    @Test
+    @Order(8)
+    @DisplayName("should update profile")
+    void shouldUpdateProfile() throws Exception {
+        RegisterRequest register = new RegisterRequest("updateuser", "update@test.com", "password123");
+        MvcResult result = mockMvc.perform(post("/api/auth/register")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(register)))
+                .andExpect(status().isCreated())
+                .andReturn();
+
+        AuthResponse response = objectMapper.readValue(
+                result.getResponse().getContentAsString(), AuthResponse.class
+        );
+
+        String updateBody = "{\"bio\":\"My new bio\",\"phone\":\"+71234567890\"}";
+
+        mockMvc.perform(patch("/api/users/me")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(updateBody)
+                        .header("Authorization", "Bearer " + response.accessToken()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.bio").value("My new bio"))
+                .andExpect(jsonPath("$.phone").value("+71234567890"))
+                .andExpect(jsonPath("$.username").value("updateuser"));
+    }
+
+    @Test
+    @Order(9)
+    @DisplayName("should get public profile")
+    void shouldGetPublicProfile() throws Exception {
+        RegisterRequest register = new RegisterRequest("publicuser", "public@test.com", "password123");
+        MvcResult result = mockMvc.perform(post("/api/auth/register")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(register)))
+                .andExpect(status().isCreated())
+                .andReturn();
+
+        AuthResponse response = objectMapper.readValue(
+                result.getResponse().getContentAsString(), AuthResponse.class
+        );
+
+        mockMvc.perform(get("/api/users/" + response.userId()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.username").value("publicuser"))
+                .andExpect(jsonPath("$.id").value(response.userId()))
+                .andExpect(jsonPath("$.email").doesNotExist());
+    }
+
+    @Test
+    @Order(10)
+    @DisplayName("should delete account")
+    void shouldDeleteAccount() throws Exception {
+        RegisterRequest register = new RegisterRequest("deleteuser", "delete@test.com", "password123");
+        MvcResult result = mockMvc.perform(post("/api/auth/register")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(register)))
+                .andExpect(status().isCreated())
+                .andReturn();
+
+        AuthResponse response = objectMapper.readValue(
+                result.getResponse().getContentAsString(), AuthResponse.class
+        );
+
+        mockMvc.perform(delete("/api/users/me")
+                        .header("Authorization", "Bearer " + response.accessToken()))
+                .andExpect(status().isNoContent());
+
+        String loginBody = "{\"login\":\"deleteuser\",\"password\":\"password123\"}";
+        mockMvc.perform(post("/api/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(loginBody))
                 .andExpect(status().isUnauthorized());
     }
 }
