@@ -18,7 +18,7 @@ import exception.auth.UserAlreadyExistsException;
 import exception.auth.UserNotFoundException;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.security.authentication.AuthenticationManager;
-import org.springframework.security.authentication.BadCredentialsException;
+import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -91,7 +91,7 @@ public class AuthService {
             authenticationManager.authenticate(
                     new UsernamePasswordAuthenticationToken(user.getUsername(), request.password())
             );
-        } catch (BadCredentialsException e) {
+        } catch (AuthenticationException e) {
             throw new InvalidCredentialsException();
         }
 

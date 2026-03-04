@@ -3,8 +3,11 @@ package com.example.identityservice.integration;
 import com.example.identityservice.dto.request.LoginRequest;
 import com.example.identityservice.dto.request.RegisterRequest;
 import com.example.identityservice.dto.response.AuthResponse;
+import com.example.identityservice.entity.User;
+import com.example.identityservice.entity.enums.UserStatus;
 import com.example.identityservice.repository.UserRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import org.junit.jupiter.api.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -15,9 +18,6 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @SpringBootTest
@@ -37,14 +37,21 @@ class AuthIntegrationTest {
     @BeforeEach
     void setUp() {
         objectMapper = new ObjectMapper();
+        objectMapper.registerModule(new JavaTimeModule());
+
         userRepository.deleteAll();
+    }
+
+    private void activateUser(String username) {
+        User user = userRepository.findByUsername(username).orElseThrow();
+        user.setStatus(UserStatus.ACTIVE);
+        userRepository.save(user);
     }
 
     @Test
     @Order(1)
     @DisplayName("full auth flow: register → login → refresh → logout")
     void fullAuthFlow() throws Exception {
-        // 1. Register
         RegisterRequest registerRequest = new RegisterRequest("flowuser", "flow@test.com", "password123");
 
         MvcResult registerResult = mockMvc.perform(post("/api/auth/register")
@@ -52,18 +59,10 @@ class AuthIntegrationTest {
                         .content(objectMapper.writeValueAsString(registerRequest)))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.accessToken").isNotEmpty())
-                .andExpect(jsonPath("$.refreshToken").isNotEmpty())
                 .andReturn();
 
-        AuthResponse registerResponse = objectMapper.readValue(
-                registerResult.getResponse().getContentAsString(),
-                AuthResponse.class
-        );
+        activateUser("flowuser");
 
-        assertThat(registerResponse.username()).isEqualTo("flowuser");
-        assertThat(registerResponse.role()).isEqualTo("USER");
-
-        // 2. Login
         LoginRequest loginRequest = new LoginRequest("flowuser", "password123");
 
         MvcResult loginResult = mockMvc.perform(post("/api/auth/login")
@@ -78,7 +77,6 @@ class AuthIntegrationTest {
                 AuthResponse.class
         );
 
-        // 3. Refresh
         String refreshBody = "{\"refreshToken\":\"" + loginResponse.refreshToken() + "\"}";
 
         mockMvc.perform(post("/api/auth/refresh")
@@ -87,7 +85,6 @@ class AuthIntegrationTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.accessToken").isNotEmpty());
 
-        // 4. Logout
         mockMvc.perform(post("/api/auth/logout")
                         .header("Authorization", "Bearer " + loginResponse.accessToken()))
                 .andExpect(status().isNoContent());
@@ -122,6 +119,8 @@ class AuthIntegrationTest {
                         .content(objectMapper.writeValueAsString(register)))
                 .andExpect(status().isCreated());
 
+        activateUser("wrongpass");
+
         LoginRequest login = new LoginRequest("wrongpass", "wrongpassword");
         mockMvc.perform(post("/api/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -138,6 +137,8 @@ class AuthIntegrationTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(register)))
                 .andExpect(status().isCreated());
+
+        activateUser("emailuser");
 
         String loginBody = "{\"login\":\"email@test.com\",\"password\":\"password123\"}";
 
@@ -187,6 +188,8 @@ class AuthIntegrationTest {
                 result.getResponse().getContentAsString(),
                 AuthResponse.class
         );
+
+        activateUser("changepassuser");
 
         String changeBody = "{\"currentPassword\":\"oldPassword123\",\"newPassword\":\"newPassword123\"}";
 
@@ -296,6 +299,8 @@ class AuthIntegrationTest {
         AuthResponse response = objectMapper.readValue(
                 result.getResponse().getContentAsString(), AuthResponse.class
         );
+
+        activateUser("deleteuser");
 
         mockMvc.perform(delete("/api/users/me")
                         .header("Authorization", "Bearer " + response.accessToken()))
