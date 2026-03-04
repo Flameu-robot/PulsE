@@ -1,6 +1,5 @@
 package com.example.identityservice.controller;
 
-import com.example.identityservice.dto.request.LoginRequest;
 import com.example.identityservice.dto.request.RegisterRequest;
 import com.example.identityservice.dto.response.AuthResponse;
 import com.example.identityservice.service.AuthService;
@@ -20,6 +19,7 @@ import org.springframework.test.web.servlet.MockMvc;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
@@ -147,24 +147,24 @@ class AuthControllerTest {
         void shouldReturn200OnSuccess() throws Exception {
             when(authService.login(any(), any())).thenReturn(successResponse);
 
-            LoginRequest request = new LoginRequest("testuser", "password123");
+            String body = "{\"login\":\"testuser\",\"password\":\"password123\"}";
 
             mockMvc.perform(post("/api/auth/login")
                             .contentType(MediaType.APPLICATION_JSON)
-                            .content(objectMapper.writeValueAsString(request)))
+                            .content(body))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.accessToken").value("access-token"))
                     .andExpect(jsonPath("$.username").value("testuser"));
         }
 
         @Test
-        @DisplayName("should return 422 on blank username")
-        void shouldReturn422OnBlankUsername() throws Exception {
-            LoginRequest request = new LoginRequest("", "password123");
+        @DisplayName("should return 422 on blank login")
+        void shouldReturn422OnBlankLogin() throws Exception {
+            String body = "{\"login\":\"\",\"password\":\"password123\"}";
 
             mockMvc.perform(post("/api/auth/login")
                             .contentType(MediaType.APPLICATION_JSON)
-                            .content(objectMapper.writeValueAsString(request)))
+                            .content(body))
                     .andExpect(status().isUnprocessableEntity());
         }
     }
@@ -180,4 +180,63 @@ class AuthControllerTest {
                     .andExpect(status().isUnauthorized());
         }
     }
+
+    @Nested
+    @DisplayName("GET /api/auth/me")
+    class GetCurrentUser {
+
+        @Test
+        @DisplayName("should return 401 without token")
+        void shouldReturn401WithoutToken() throws Exception {
+            mockMvc.perform(get("/api/auth/me"))
+                    .andExpect(status().isUnauthorized());
+        }
+    }
+
+    @Nested
+    @DisplayName("POST /api/auth/password/change")
+    class ChangePassword {
+
+        @Test
+        @DisplayName("should return 401 without token")
+        void shouldReturn401WithoutToken() throws Exception {
+            String body = "{\"currentPassword\":\"old123456\",\"newPassword\":\"new123456\"}";
+
+            mockMvc.perform(post("/api/auth/password/change")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(body))
+                    .andExpect(status().isUnauthorized());
+        }
+    }
+
+    @Nested
+    @DisplayName("POST /api/auth/login with email")
+    class LoginWithEmail {
+
+        @Test
+        @DisplayName("should return 200 on login with email")
+        void shouldReturn200OnLoginWithEmail() throws Exception {
+            when(authService.login(any(), any())).thenReturn(successResponse);
+
+            String body = "{\"login\":\"test@test.com\",\"password\":\"password123\"}";
+
+            mockMvc.perform(post("/api/auth/login")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(body))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.accessToken").value("access-token"));
+        }
+
+        @Test
+        @DisplayName("should return 422 on blank login")
+        void shouldReturn422OnBlankLogin() throws Exception {
+            String body = "{\"login\":\"\",\"password\":\"password123\"}";
+
+            mockMvc.perform(post("/api/auth/login")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(body))
+                    .andExpect(status().isUnprocessableEntity());
+        }
+    }
+
 }

@@ -1,9 +1,11 @@
 package com.example.identityservice.controller;
 
+import com.example.identityservice.dto.request.ChangePasswordRequest;
 import com.example.identityservice.dto.request.LoginRequest;
 import com.example.identityservice.dto.request.RefreshTokenRequest;
 import com.example.identityservice.dto.request.RegisterRequest;
 import com.example.identityservice.dto.response.AuthResponse;
+import com.example.identityservice.dto.response.UserResponse;
 import com.example.identityservice.service.AuthService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
@@ -62,6 +64,23 @@ public class AuthController {
             @AuthenticationPrincipal UserDetails userDetails
     ) {
         authService.logoutAll(userDetails.getUsername());
+        return ResponseEntity.noContent().build();
+    }
+
+    @GetMapping("/me")
+    public ResponseEntity<UserResponse> getCurrentUser(
+            @AuthenticationPrincipal UserDetails userDetails
+    ) {
+        UserResponse response = authService.getCurrentUser(userDetails.getUsername());
+        return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/password/change")
+    public ResponseEntity<Void> changePassword(
+            @AuthenticationPrincipal UserDetails userDetails,
+            @Valid @RequestBody ChangePasswordRequest request
+    ) {
+        authService.changePassword(userDetails.getUsername(), request);
         return ResponseEntity.noContent().build();
     }
 }

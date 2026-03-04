@@ -14,6 +14,7 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
@@ -124,6 +125,88 @@ class AuthIntegrationTest {
         mockMvc.perform(post("/api/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(login)))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    @Order(4)
+    @DisplayName("should login with email")
+    void shouldLoginWithEmail() throws Exception {
+        RegisterRequest register = new RegisterRequest("emailuser", "email@test.com", "password123");
+        mockMvc.perform(post("/api/auth/register")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(register)))
+                .andExpect(status().isCreated());
+
+        String loginBody = "{\"login\":\"email@test.com\",\"password\":\"password123\"}";
+
+        mockMvc.perform(post("/api/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(loginBody))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.username").value("emailuser"));
+    }
+
+    @Test
+    @Order(5)
+    @DisplayName("should get current user")
+    void shouldGetCurrentUser() throws Exception {
+        RegisterRequest register = new RegisterRequest("meuser", "me@test.com", "password123");
+        MvcResult result = mockMvc.perform(post("/api/auth/register")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(register)))
+                .andExpect(status().isCreated())
+                .andReturn();
+
+        AuthResponse response = objectMapper.readValue(
+                result.getResponse().getContentAsString(),
+                AuthResponse.class
+        );
+
+        mockMvc.perform(get("/api/auth/me")
+                        .header("Authorization", "Bearer " + response.accessToken()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.username").value("meuser"))
+                .andExpect(jsonPath("$.email").value("me@test.com"))
+                .andExpect(jsonPath("$.role").value("USER"));
+    }
+
+    @Test
+    @Order(6)
+    @DisplayName("should change password")
+    void shouldChangePassword() throws Exception {
+        RegisterRequest register = new RegisterRequest("changepassuser", "changepass@test.com", "oldPassword123");
+        MvcResult result = mockMvc.perform(post("/api/auth/register")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(register)))
+                .andExpect(status().isCreated())
+                .andReturn();
+
+        AuthResponse response = objectMapper.readValue(
+                result.getResponse().getContentAsString(),
+                AuthResponse.class
+        );
+
+        String changeBody = "{\"currentPassword\":\"oldPassword123\",\"newPassword\":\"newPassword123\"}";
+
+        mockMvc.perform(post("/api/auth/password/change")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(changeBody)
+                        .header("Authorization", "Bearer " + response.accessToken()))
+                .andExpect(status().isNoContent());
+
+        String loginBody = "{\"login\":\"changepassuser\",\"password\":\"newPassword123\"}";
+
+        mockMvc.perform(post("/api/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(loginBody))
+                .andExpect(status().isOk());
+
+        String oldLoginBody = "{\"login\":\"changepassuser\",\"password\":\"oldPassword123\"}";
+
+        mockMvc.perform(post("/api/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(oldLoginBody))
                 .andExpect(status().isUnauthorized());
     }
 }

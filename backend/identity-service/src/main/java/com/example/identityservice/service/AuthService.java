@@ -1,9 +1,11 @@
 package com.example.identityservice.service;
 
+import com.example.identityservice.dto.request.ChangePasswordRequest;
 import com.example.identityservice.dto.request.LoginRequest;
 import com.example.identityservice.dto.request.RefreshTokenRequest;
 import com.example.identityservice.dto.request.RegisterRequest;
 import com.example.identityservice.dto.response.AuthResponse;
+import com.example.identityservice.dto.response.UserResponse;
 import com.example.identityservice.entity.RefreshToken;
 import com.example.identityservice.entity.User;
 import com.example.identityservice.entity.enums.UserRole;
@@ -74,16 +76,24 @@ public class AuthService {
 
     @Transactional
     public AuthResponse login(LoginRequest request, HttpServletRequest httpRequest) {
+        String login = request.login();
+        User user;
+
+        if (login.contains("@")) {
+            user = userRepository.findByEmail(login)
+                    .orElseThrow(InvalidCredentialsException::new);
+        } else {
+            user = userRepository.findByUsername(login)
+                    .orElseThrow(InvalidCredentialsException::new);
+        }
+
         try {
             authenticationManager.authenticate(
-                    new UsernamePasswordAuthenticationToken(request.username(), request.password())
+                    new UsernamePasswordAuthenticationToken(user.getUsername(), request.password())
             );
         } catch (BadCredentialsException e) {
             throw new InvalidCredentialsException();
         }
-
-        User user = userRepository.findByUsername(request.username())
-                .orElseThrow(() -> new UserNotFoundException(request.username()));
 
         user.setLastLoginAt(OffsetDateTime.now());
         userRepository.save(user);
@@ -165,6 +175,39 @@ public class AuthService {
                 user.getId(),
                 user.getUsername(),
                 user.getRole().name()
+        );
+    }
+
+    @Transactional
+    public void changePassword(String username, ChangePasswordRequest request) {
+        User user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new UserNotFoundException(username));
+
+        if (!passwordEncoder.matches(request.currentPassword(), user.getPasswordHash())) {
+            throw new InvalidCredentialsException();
+        }
+
+        user.setPasswordHash(passwordEncoder.encode(request.newPassword()));
+        userRepository.save(user);
+
+        refreshTokenRepository.revokeAllByUserId(user.getId());
+    }
+
+    public UserResponse getCurrentUser(String username) {
+        User user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new UserNotFoundException(username));
+
+        return new UserResponse(
+                user.getId(),
+                user.getUsername(),
+                user.getEmail(),
+                user.getPhone(),
+                user.getRole().name(),
+                user.getStatus().name(),
+                user.getAvatarUrl(),
+                user.getBio(),
+                user.getCreatedAt(),
+                user.getLastLoginAt()
         );
     }
 
