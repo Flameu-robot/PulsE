@@ -18,7 +18,16 @@ dependencies {
 
     implementation(libs.bundles.gateway)
 
+    implementation(libs.spring.boot.starter.security)
+
+    implementation(libs.bundles.jwt)
+
+    compileOnly(libs.lombok)
+    annotationProcessor(libs.lombok)
+
     annotationProcessor(libs.spring.boot.configuration.processor)
+
+    testImplementation(libs.bundles.testing)
 }
 
 tasks.withType<Test> {
