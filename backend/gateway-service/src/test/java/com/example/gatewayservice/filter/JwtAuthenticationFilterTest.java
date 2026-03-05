@@ -44,7 +44,7 @@ class JwtAuthenticationFilterTest {
     }
 
     @Test
-    @DisplayName("Skip open endpoints (login/register)")
+    @DisplayName("Skip open endpoints (login)")
     void shouldPassOpenEndpointsWithoutToken() {
 
         MockServerWebExchange exchange = MockServerWebExchange.from(
@@ -52,49 +52,60 @@ class JwtAuthenticationFilterTest {
         );
 
         // Запуск фильтра
-        Mono<Void> result = filter.filter(exchange, chain);
-
-        StepVerifier.create(result).verifyComplete();
+        StepVerifier.create(filter.filter(exchange, chain)).verifyComplete();
 
         // chain.filter был вызван
-        verify(chain).filter(exchange);
+        verify(chain).filter(any(ServerWebExchange.class));
         // jwtUtils не вызывался
         verifyNoInteractions(jwtUtils);
     }
 
     @Test
-    @DisplayName("401 without header Authorization")
+    @DisplayName("401 when Authorization header is missing")
     void shouldReturn401WhenNoHeader() {
 
         MockServerWebExchange exchange = MockServerWebExchange.from(
                 MockServerHttpRequest.get("/api/users").build()
         );
 
-        Mono<Void> result = filter.filter(exchange, chain);
-
-        StepVerifier.create(result).verifyComplete();
+        StepVerifier.create(filter.filter(exchange, chain)).verifyComplete();
 
         assertThat(exchange.getResponse().getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
         verify(chain, never()).filter(any());
     }
 
     @Test
-    @DisplayName("401 without Bearer format")
-    void shouldReturn401WhenInvalidHeaderFormat() {
+    @DisplayName("401 when Authorization header is empty")
+    void shouldReturn401WhenHeaderEmpty() {
+        MockServerWebExchange exchange = MockServerWebExchange.from(
+                MockServerHttpRequest.get("/api/users")
+                        .header(HttpHeaders.AUTHORIZATION, "")
+                        .build()
+        );
+
+        StepVerifier.create(filter.filter(exchange, chain)).verifyComplete();
+
+        assertThat(exchange.getResponse().getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
+        verify(chain, never()).filter(any());
+    }
+
+    @Test
+    @DisplayName("401 when Authorization header has wrong format")
+    void shouldReturn401WhenNotBearerFormat() {
         MockServerWebExchange exchange = MockServerWebExchange.from(
                 MockServerHttpRequest.get("/api/users")
                         .header(HttpHeaders.AUTHORIZATION, "Basic 12345")
                         .build()
         );
 
-        filter.filter(exchange, chain).block();
+        StepVerifier.create(filter.filter(exchange, chain)).verifyComplete();
 
         assertThat(exchange.getResponse().getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
         verify(chain, never()).filter(any());
     }
 
     @Test
-    @DisplayName("401 invalid token")
+    @DisplayName("401 when token is invalid")
     void shouldReturn401WhenTokenInvalid() {
         String token = "invalid.token.value";
         MockServerWebExchange exchange = MockServerWebExchange.from(
@@ -105,15 +116,15 @@ class JwtAuthenticationFilterTest {
 
         when(jwtUtils.validateToken(token)).thenReturn(false);
 
-        filter.filter(exchange, chain).block();
+        StepVerifier.create(filter.filter(exchange, chain)).verifyComplete();
 
         assertThat(exchange.getResponse().getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
         verify(chain, never()).filter(any());
     }
 
     @Test
-    @DisplayName("Success: HttpRequest received the necessary headers")
-    void shouldAddHeadersWhenTokenIsValid() {
+    @DisplayName("Valid token: headers are added to downstream request")
+    void shouldAddHeadersWhenTokenValid() {
         String token = "valid.token.value";
         MockServerWebExchange exchange = MockServerWebExchange.from(
                 MockServerHttpRequest.get("/api/users")
@@ -127,18 +138,47 @@ class JwtAuthenticationFilterTest {
         when(claims.get("userId")).thenReturn(3);
         when(claims.get("role")).thenReturn("USER");
         when(claims.getSubject()).thenReturn("Ziragon");
-
         when(jwtUtils.getAllClaimsFromToken(token)).thenReturn(claims);
 
-        filter.filter(exchange, chain).block();
+        StepVerifier.create(filter.filter(exchange, chain)).verifyComplete();
 
-        // Перехват запроса
         ArgumentCaptor<ServerWebExchange> captor = ArgumentCaptor.forClass(ServerWebExchange.class);
         verify(chain).filter(captor.capture());
 
-        ServerWebExchange processedExchange = captor.getValue();
-        HttpHeaders headers = processedExchange.getRequest().getHeaders();
+        HttpHeaders headers = captor.getValue().getRequest().getHeaders();
+        assertThat(headers.getFirst("X-User-Id")).isEqualTo("3");
+        assertThat(headers.getFirst("X-User-Role")).isEqualTo("USER");
+        assertThat(headers.getFirst("X-User-Sub")).isEqualTo("Ziragon");
+    }
 
+    // Spoofing - подмена заголовков в запросе
+    @Test
+    @DisplayName("Spoofed X-User headers are stripped on protected endpoint")
+    void shouldStripSpoofedHeadersOnProtectedEndpoint() {
+        String token = "valid.token.value";
+        MockServerWebExchange exchange = MockServerWebExchange.from(
+                MockServerHttpRequest.get("/api/users")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
+                        .header("X-User-Id", "999")
+                        .header("X-User-Role", "ADMIN")
+                        .header("X-User-Sub", "hacker")
+                        .build()
+        );
+
+        when(jwtUtils.validateToken(token)).thenReturn(true);
+
+        Claims claims = mock(Claims.class);
+        when(claims.get("userId")).thenReturn(3);
+        when(claims.get("role")).thenReturn("USER");
+        when(claims.getSubject()).thenReturn("Ziragon");
+        when(jwtUtils.getAllClaimsFromToken(token)).thenReturn(claims);
+
+        StepVerifier.create(filter.filter(exchange, chain)).verifyComplete();
+
+        ArgumentCaptor<ServerWebExchange> captor = ArgumentCaptor.forClass(ServerWebExchange.class);
+        verify(chain).filter(captor.capture());
+
+        HttpHeaders headers = captor.getValue().getRequest().getHeaders();
         assertThat(headers.getFirst("X-User-Id")).isEqualTo("3");
         assertThat(headers.getFirst("X-User-Role")).isEqualTo("USER");
         assertThat(headers.getFirst("X-User-Sub")).isEqualTo("Ziragon");
