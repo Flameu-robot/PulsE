@@ -27,6 +27,9 @@ dependencies {
 
     annotationProcessor(libs.spring.boot.configuration.processor)
 
+    compileOnly(libs.jspecify)
+    testCompileOnly(libs.jspecify)
+
     testImplementation(libs.bundles.testing)
 }
 
