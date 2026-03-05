@@ -1,4 +1,6 @@
 spring:
+  application:
+    name: pulse-gateway
   cloud:
     gateway:
       server:
@@ -9,9 +11,17 @@ spring:
             cors-configurations:
               '[/**]':
                 allowed-origins: "*"
-                allowed-methods: "*"
+                allowed-methods:
+                  - GET
+                  - POST
+                  - PUT
+                  - DELETE
+                  - OPTIONS
                 allowed-headers: "*"
-                allow-credentials: true
+                allow-credentials: false
+
+jwt:
+  secret: "SECRETKEYSECRETKEYSECRETKEYSECRETKEYSECRETKEYSECRETKEYSECRETKEYSECRETKEYSECRETKEYSECRETKEY"
 
 management:
   endpoints:
@@ -26,5 +36,6 @@ management:
 
 logging:
   level:
-    org.springframework.cloud.gateway: TRACE
-    org.springframework.http.server.reactive: DEBUG
+    org.springframework.cloud.gateway: DEBUG
+    org.springframework.security: DEBUG
+    org.springframework.security.oauth2: DEBUG
