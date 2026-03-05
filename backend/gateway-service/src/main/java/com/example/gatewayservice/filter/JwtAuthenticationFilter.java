@@ -39,6 +39,16 @@ public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
         ServerHttpRequest request = exchange.getRequest();
         String path = request.getPath().value();
 
+        // Очистка заголовков
+        ServerHttpRequest sanitizedRequest = request.mutate()
+                .headers(h -> {
+                    h.remove("X-User-Id");
+                    h.remove("X-User-Role");
+                    h.remove("X-User-Sub");
+                })
+                .build();
+        exchange = exchange.mutate().request(sanitizedRequest).build();
+
         // Пропуск открытых эндпоинтов
         if (openApiEndpoints.stream().anyMatch(path::startsWith)) {
             return chain.filter(exchange);
