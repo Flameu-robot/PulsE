@@ -35,4 +35,19 @@ dependencies {
 
 tasks.withType<Test> {
     useJUnitPlatform()
+
+    // Убирает предупреждение о загрузке агентов в Java 25
+    jvmArgs("-XX:+EnableDynamicAgentLoading")
+
+    testLogging {
+        events("passed", "skipped", "failed")
+        showStandardStreams = true
+        exceptionFormat = org.gradle.api.tasks.testing.logging.TestExceptionFormat.FULL
+    }
+}
+
+tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinJvmCompile>().configureEach {
+    compilerOptions {
+        jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.fromTarget("25"))
+    }
 }

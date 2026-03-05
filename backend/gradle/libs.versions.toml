@@ -53,6 +53,7 @@ junit-launcher                              = { group = "org.junit.platform",   
 testcontainers-junit                        = { group = "org.testcontainers", name = "junit-jupiter",  version.ref = "testcontainers" }
 testcontainers-postgresql                   = { group = "org.testcontainers", name = "postgresql",     version.ref = "testcontainers" }
 testcontainers-kafka                        = { group = "org.testcontainers", name = "kafka",          version.ref = "testcontainers" }
+reactor-test                                = { group = "io.projectreactor", name = "reactor-test" }
 
 
 [bundles]
@@ -96,6 +97,7 @@ testing = [
     "spring-boot-starter-test",
     "spring-security-test",
     "spring-kafka-test",
+    "reactor-test",
 ]
 
 gateway = [
