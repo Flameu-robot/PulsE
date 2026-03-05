@@ -100,8 +100,14 @@ testing = [
     "reactor-test",
 ]
 
+testing-base = [
+    "spring-boot-starter-test",
+    "reactor-test",
+]
+
 gateway = [
     "spring-cloud-starter-gateway",
+    "spring-boot-starter-security",
     "spring-boot-starter-actuator",
 ]
 

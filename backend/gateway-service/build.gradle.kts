@@ -17,9 +17,6 @@ dependencies {
     implementation(platform(libs.spring.cloud.dependencies))
 
     implementation(libs.bundles.gateway)
-
-    implementation(libs.spring.boot.starter.security)
-
     implementation(libs.bundles.jwt)
 
     compileOnly(libs.lombok)
@@ -30,7 +27,7 @@ dependencies {
     compileOnly(libs.jspecify)
     testCompileOnly(libs.jspecify)
 
-    testImplementation(libs.bundles.testing)
+    testImplementation(libs.bundles.testing.base)
 }
 
 tasks.withType<Test> {
