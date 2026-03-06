@@ -12,5 +12,5 @@ spring:
     active: dev
 
 server:
-  port: 9000
+  port: 8000
   shutdown: graceful

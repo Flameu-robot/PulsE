@@ -27,9 +27,21 @@ public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
 
     // Список путей, не требующих авторизации
     private final List<String> openApiEndpoints = List.of(
-            "/auth/login",
-            "/auth/register",
-            "/v3/api-docs"
+            // Indentity-service
+            "/api/auth/register",
+            "/api/auth/login",
+            "/api/auth/refresh",
+            "/api/auth/password/forgot",
+            "/api/auth/password/reset",
+            "/api/auth/webauthn/login/**",
+            "/api/users/{id}",
+
+            "/api/auth/oauth2/**",
+            "/oauth2/**",
+
+            "/swagger-ui/**",
+            "/v3/api-docs/**",
+            "/swagger-ui.html"
     );
 
     @SuppressWarnings("NullableProblems")
