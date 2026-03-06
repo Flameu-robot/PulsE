@@ -19,6 +19,8 @@ dependencies {
     implementation(libs.bundles.gateway)
     implementation(libs.bundles.jwt)
 
+    implementation(libs.springdoc.openapi.webflux.ui)
+
     developmentOnly("org.springframework.boot:spring-boot-devtools")
 
     compileOnly(libs.lombok)

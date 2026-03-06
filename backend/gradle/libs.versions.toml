@@ -5,7 +5,7 @@ dependencyManagement    = "1.1.7"
 jjwt                    = "0.12.6"
 webauthn                = "2.5.3"
 minio                   = "8.5.14"
-springdoc               = "2.8.4"
+springdoc               = "3.0.1"
 mapstruct               = "1.6.3"
 hypersistence           = "3.15.2"
 testcontainers          = "1.20.4"
@@ -50,6 +50,7 @@ webauthn-server-core                        = { group = "com.yubico", name = "we
 webauthn-server-attestation                 = { group = "com.yubico", name = "webauthn-server-attestation",  version.ref = "webauthn" }
 minio                                       = { group = "io.minio", name = "minio", version.ref = "minio" }
 springdoc-openapi-webmvc-ui                 = { group = "org.springdoc", name = "springdoc-openapi-starter-webmvc-ui", version.ref = "springdoc" }
+springdoc-openapi-webflux-ui                = { group = "org.springdoc", name = "springdoc-openapi-starter-webflux-ui", version.ref = "springdoc" }
 micrometer-prometheus                       = { group = "io.micrometer", name = "micrometer-registry-prometheus" }
 lombok                                      = { group = "org.projectlombok", name = "lombok", version.ref = "lombok" }
 mapstruct                                   = { group = "org.mapstruct", name = "mapstruct",           version.ref = "mapstruct" }

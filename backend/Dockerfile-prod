@@ -1,0 +1,41 @@
+FROM eclipse-temurin:25-jdk-alpine AS builder
+
+WORKDIR /app
+
+ARG MODULE_NAME
+
+COPY gradle/ gradle/
+COPY gradlew settings.gradle.kts build.gradle.kts gradle.properties* ./
+COPY config/ config/
+
+RUN chmod +x ./gradlew
+
+COPY shared/ shared/
+COPY feed-service/ feed-service/
+COPY gateway-service/ gateway-service/
+COPY identity-service/ identity-service/
+COPY messenger-service/ messenger-service/
+COPY music-service/ music-service/
+COPY notification-service/ notification-service/
+COPY space-service/ space-service/
+
+RUN ./gradlew :${MODULE_NAME}:bootJar --no-daemon -x test -x checkstyleMain -x checkstyleTest
+
+FROM eclipse-temurin:25-jre-alpine
+
+WORKDIR /app
+
+ARG MODULE_NAME
+
+COPY --from=builder /app/${MODULE_NAME}/build/libs/*.jar app.jar
+
+ENV JAVA_OPTS="-XX:+UseContainerSupport \
+               -XX:MaxRAMPercentage=75.0 \
+               -XX:InitialRAMPercentage=50.0 \
+               -XX:+UseG1GC \
+               -Xss512k \
+               -XX:MetaspaceSize=64m \
+               -XX:MaxMetaspaceSize=128m \
+               -Djava.security.egd=file:/dev/./urandom"
+
+ENTRYPOINT ["sh", "-c", "java $JAVA_OPTS -jar app.jar"]

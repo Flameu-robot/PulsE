@@ -44,11 +44,11 @@ class JwtAuthenticationFilterTest {
     }
 
     @Test
-    @DisplayName("Skip open endpoints (login)")
+    @DisplayName("Skip open endpoints")
     void shouldPassOpenEndpointsWithoutToken() {
 
         MockServerWebExchange exchange = MockServerWebExchange.from(
-                MockServerHttpRequest.post("/auth/login").build()
+                MockServerHttpRequest.post("/v3/api-docs/else").build()
         );
 
         // Запуск фильтра
