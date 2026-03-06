@@ -38,7 +38,6 @@ class AuthIntegrationTest {
     void setUp() {
         objectMapper = new ObjectMapper();
         objectMapper.registerModule(new JavaTimeModule());
-
         userRepository.deleteAll();
     }
 
@@ -85,8 +84,12 @@ class AuthIntegrationTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.accessToken").isNotEmpty());
 
+        String logoutBody = "{\"refreshToken\":\"" + loginResponse.refreshToken() + "\"}";
+
         mockMvc.perform(post("/api/auth/logout")
-                        .header("Authorization", "Bearer " + loginResponse.accessToken()))
+                        .header("Authorization", "Bearer " + loginResponse.accessToken())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(logoutBody))
                 .andExpect(status().isNoContent());
     }
 
@@ -310,6 +313,53 @@ class AuthIntegrationTest {
         mockMvc.perform(post("/api/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(loginBody))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    @Order(11)
+    @DisplayName("should logout-all revoke all sessions")
+    void shouldLogoutAll() throws Exception {
+        RegisterRequest register = new RegisterRequest("logoutalluser", "logoutall@test.com", "password123");
+        mockMvc.perform(post("/api/auth/register")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(register)))
+                .andExpect(status().isCreated());
+
+        activateUser("logoutalluser");
+
+        MvcResult login1 = mockMvc.perform(post("/api/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"login\":\"logoutalluser\",\"password\":\"password123\"}"))
+                .andExpect(status().isOk())
+                .andReturn();
+
+        AuthResponse response1 = objectMapper.readValue(
+                login1.getResponse().getContentAsString(), AuthResponse.class
+        );
+
+        MvcResult login2 = mockMvc.perform(post("/api/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"login\":\"logoutalluser\",\"password\":\"password123\"}"))
+                .andExpect(status().isOk())
+                .andReturn();
+
+        AuthResponse response2 = objectMapper.readValue(
+                login2.getResponse().getContentAsString(), AuthResponse.class
+        );
+
+        mockMvc.perform(post("/api/auth/logout-all")
+                        .header("Authorization", "Bearer " + response1.accessToken()))
+                .andExpect(status().isNoContent());
+
+        mockMvc.perform(post("/api/auth/refresh")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"refreshToken\":\"" + response1.refreshToken() + "\"}"))
+                .andExpect(status().isUnauthorized());
+
+        mockMvc.perform(post("/api/auth/refresh")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"refreshToken\":\"" + response2.refreshToken() + "\"}"))
                 .andExpect(status().isUnauthorized());
     }
 }

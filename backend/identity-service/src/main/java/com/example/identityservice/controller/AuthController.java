@@ -45,17 +45,19 @@ public class AuthController {
 
     @PostMapping("/refresh")
     public ResponseEntity<AuthResponse> refresh(
-            @Valid @RequestBody RefreshTokenRequest request
+            @Valid @RequestBody RefreshTokenRequest request,
+            HttpServletRequest httpRequest
     ) {
-        AuthResponse response = authService.refresh(request);
+        AuthResponse response = authService.refresh(request, httpRequest);
         return ResponseEntity.ok(response);
     }
 
     @PostMapping("/logout")
     public ResponseEntity<Void> logout(
-            @AuthenticationPrincipal UserDetails userDetails
+            @AuthenticationPrincipal UserDetails userDetails,
+            @Valid @RequestBody RefreshTokenRequest request
     ) {
-        authService.logout(userDetails.getUsername());
+        authService.logout(userDetails.getUsername(), request.refreshToken());
         return ResponseEntity.noContent().build();
     }
 

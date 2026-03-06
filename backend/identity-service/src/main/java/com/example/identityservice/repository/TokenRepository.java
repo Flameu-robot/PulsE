@@ -5,6 +5,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 
+import java.util.List;
 import java.util.Optional;
 
 public interface TokenRepository extends JpaRepository<RefreshToken, Long> {
@@ -16,4 +17,8 @@ public interface TokenRepository extends JpaRepository<RefreshToken, Long> {
     void revokeAllByUserId(Long userId);
 
     void deleteAllByUserId(Long userId);
+
+    @Query("SELECT rt FROM RefreshToken rt WHERE rt.user.id = :userId " +
+            "AND rt.revoked = false AND rt.expiresAt > CURRENT_TIMESTAMP")
+    List<RefreshToken> findActiveByUserId(Long userId);
 }

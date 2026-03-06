@@ -6,6 +6,7 @@ import com.example.identityservice.dto.response.UserResponse;
 import com.example.identityservice.entity.User;
 import com.example.identityservice.repository.TokenRepository;
 import com.example.identityservice.repository.UserRepository;
+import com.example.identityservice.repository.VerificationRepository;
 import exception.auth.UserNotFoundException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -19,13 +20,16 @@ public class UserService {
 
     private final UserRepository userRepository;
     private final TokenRepository tokenRepository;
+    private final VerificationRepository verificationRepository;
 
     public UserService(
             UserRepository userRepository,
-            TokenRepository tokenRepository
+            TokenRepository tokenRepository,
+            VerificationRepository verificationRepository
     ) {
         this.userRepository = userRepository;
         this.tokenRepository = tokenRepository;
+        this.verificationRepository = verificationRepository;
     }
 
     public UserResponse getProfile(String username) {
@@ -66,11 +70,13 @@ public class UserService {
         return toUserResponse(user);
     }
 
+
     @Transactional
     public void deleteAccount(String username) {
         User user = findByUsername(username);
 
-        tokenRepository.revokeAllByUserId(user.getId());
+        tokenRepository.deleteAllByUserId(user.getId());
+        verificationRepository.deleteAllByUserId(user.getId());
 
         userRepository.delete(user);
         log.info("Account deleted for user {}", username);

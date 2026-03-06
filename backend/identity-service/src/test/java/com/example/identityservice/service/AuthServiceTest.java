@@ -29,6 +29,7 @@ import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
+import java.time.OffsetDateTime;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.*;
@@ -229,11 +230,74 @@ class AuthServiceTest {
     class Logout {
 
         @Test
-        @DisplayName("should revoke all tokens on logout")
+        @DisplayName("should revoke specific token on logout")
+        void shouldRevokeSpecificToken() {
+            String rawToken = "valid-refresh-token";
+            String tokenHash = "hashed-token";
+
+            RefreshToken storedToken = RefreshToken.builder()
+                    .id(1L)
+                    .user(testUser)
+                    .tokenHash(tokenHash)
+                    .revoked(false)
+                    .expiresAt(OffsetDateTime.now().plusDays(1))
+                    .build();
+
+            when(authResponseFactory.hashToken(rawToken)).thenReturn(tokenHash);
+            when(refreshTokenRepository.findByTokenHash(tokenHash))
+                    .thenReturn(Optional.of(storedToken));
+
+            authService.logout("testuser", rawToken);
+
+            verify(refreshTokenRepository).save(argThat(token -> token.isRevoked()));
+        }
+
+        @Test
+        @DisplayName("should throw when token not found")
+        void shouldThrowWhenTokenNotFound() {
+            when(authResponseFactory.hashToken("unknown-token")).thenReturn("unknown-hash");
+            when(refreshTokenRepository.findByTokenHash("unknown-hash"))
+                    .thenReturn(Optional.empty());
+
+            assertThatThrownBy(() -> authService.logout("testuser", "unknown-token"))
+                    .isInstanceOf(TokenException.class)
+                    .hasMessageContaining("not found");
+        }
+
+        @Test
+        @DisplayName("should throw when token belongs to another user")
+        void shouldThrowWhenTokenBelongsToAnotherUser() {
+            User otherUser = User.builder()
+                    .id(2L).username("otheruser").build();
+
+            RefreshToken storedToken = RefreshToken.builder()
+                    .id(1L)
+                    .user(otherUser)
+                    .tokenHash("hashed")
+                    .revoked(false)
+                    .expiresAt(OffsetDateTime.now().plusDays(1))
+                    .build();
+
+            when(authResponseFactory.hashToken("some-token")).thenReturn("hashed");
+            when(refreshTokenRepository.findByTokenHash("hashed"))
+                    .thenReturn(Optional.of(storedToken));
+
+            assertThatThrownBy(() -> authService.logout("testuser", "some-token"))
+                    .isInstanceOf(TokenException.class)
+                    .hasMessageContaining("does not belong");
+        }
+    }
+
+    @Nested
+    @DisplayName("logoutAll")
+    class LogoutAll {
+
+        @Test
+        @DisplayName("should revoke all tokens")
         void shouldRevokeAllTokens() {
             when(userRepository.findByUsername("testuser")).thenReturn(Optional.of(testUser));
 
-            authService.logout("testuser");
+            authService.logoutAll("testuser");
 
             verify(refreshTokenRepository).revokeAllByUserId(1L);
         }
@@ -243,7 +307,7 @@ class AuthServiceTest {
         void shouldThrowWhenUserNotFound() {
             when(userRepository.findByUsername("unknown")).thenReturn(Optional.empty());
 
-            assertThatThrownBy(() -> authService.logout("unknown"))
+            assertThatThrownBy(() -> authService.logoutAll("unknown"))
                     .isInstanceOf(UserNotFoundException.class);
         }
     }
@@ -258,7 +322,7 @@ class AuthServiceTest {
             RefreshTokenRequest request = new RefreshTokenRequest("invalid-token");
             when(jwtService.isTokenValid("invalid-token")).thenReturn(false);
 
-            assertThatThrownBy(() -> authService.refresh(request))
+            assertThatThrownBy(() -> authService.refresh(request, httpRequest))
                     .isInstanceOf(TokenException.class)
                     .hasMessageContaining("Invalid");
         }
@@ -270,7 +334,7 @@ class AuthServiceTest {
             when(jwtService.isTokenValid("access-token")).thenReturn(true);
             when(jwtService.extractTokenType("access-token")).thenReturn("access");
 
-            assertThatThrownBy(() -> authService.refresh(request))
+            assertThatThrownBy(() -> authService.refresh(request, httpRequest))
                     .isInstanceOf(TokenException.class)
                     .hasMessageContaining("not a refresh");
         }
@@ -286,19 +350,21 @@ class AuthServiceTest {
                     .user(testUser)
                     .tokenHash(tokenHash)
                     .revoked(false)
-                    .expiresAt(java.time.OffsetDateTime.now().plusDays(1))
+                    .expiresAt(OffsetDateTime.now().plusDays(1))
                     .build();
 
             when(jwtService.isTokenValid("valid-refresh-token")).thenReturn(true);
             when(jwtService.extractTokenType("valid-refresh-token")).thenReturn("refresh");
             when(authResponseFactory.hashToken("valid-refresh-token")).thenReturn(tokenHash);
-            when(refreshTokenRepository.findByTokenHash(tokenHash)).thenReturn(Optional.of(storedToken));
-            when(authResponseFactory.create(eq(testUser), isNull())).thenReturn(defaultAuthResponse);
+            when(refreshTokenRepository.findByTokenHash(tokenHash))
+                    .thenReturn(Optional.of(storedToken));
+            when(authResponseFactory.create(eq(testUser), eq(httpRequest)))
+                    .thenReturn(defaultAuthResponse);
 
-            AuthResponse response = authService.refresh(request);
+            AuthResponse response = authService.refresh(request, httpRequest);
 
             assertThat(response.accessToken()).isEqualTo("access-token");
-            verify(refreshTokenRepository).save(argThat(token -> token.isRevoked()));
+            verify(refreshTokenRepository).save(argThat(RefreshToken::isRevoked));
         }
     }
 

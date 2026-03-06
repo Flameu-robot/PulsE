@@ -102,7 +102,7 @@ public class AuthService {
     }
 
     @Transactional
-    public AuthResponse refresh(RefreshTokenRequest request) {
+    public AuthResponse refresh(RefreshTokenRequest request, HttpServletRequest httpRequest) {
         String rawToken = request.refreshToken();
 
         if (!jwtService.isTokenValid(rawToken)) {
@@ -126,15 +126,21 @@ public class AuthService {
 
         User user = storedToken.getUser();
 
-        return authResponseFactory.create(user, null);
+        return authResponseFactory.create(user, httpRequest);
     }
 
     @Transactional
-    public void logout(String username) {
-        User user = userRepository.findByUsername(username)
-                .orElseThrow(() -> new UserNotFoundException(username));
+    public void logout(String username, String refreshToken) {
+        String tokenHash = authResponseFactory.hashToken(refreshToken);
+        RefreshToken storedToken = refreshTokenRepository.findByTokenHash(tokenHash)
+                .orElseThrow(() -> new TokenException("Token not found"));
 
-        refreshTokenRepository.revokeAllByUserId(user.getId());
+        if (!storedToken.getUser().getUsername().equals(username)) {
+            throw new TokenException("Token does not belong to user");
+        }
+
+        storedToken.setRevoked(true);
+        refreshTokenRepository.save(storedToken);
     }
 
     @Transactional
