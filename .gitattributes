@@ -1,0 +1,78 @@
+# =========================
+# Общие настройки
+# =========================
+# Автоматически определять текстовые файлы и производить нормализацию LF
+* text=auto
+
+# =========================
+# Исходный код (Text)
+# =========================
+# Принудительно устанавливаем LF (Unix-style) для всех исходников и конфигов.
+# Это предотвращает проблемы с Git при работе на Windows (CRLF vs LF).
+*.java text eol=lf
+*.js text eol=lf
+*.jsx text eol=lf
+*.ts text eol=lf
+*.tsx text eol=lf
+*.json text eol=lf
+*.xml text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
+*.properties text eol=lf
+*.sql text eol=lf
+*.html text eol=lf
+*.css text eol=lf
+*.scss text eol=lf
+*.md text eol=lf
+*.gradle text eol=lf
+
+# Скрипты (должны всегда иметь LF для исполнения в Docker/Linux)
+*.sh text eol=lf
+gradlew text eol=lf
+mvnw text eol=lf
+
+# Конфигурационные файлы Docker и CI/CD
+Dockerfile text eol=lf
+docker-compose*.yml text eol=lf
+.gitignore text eol=lf
+.gitattributes text eol=lf
+
+# =========================
+# Бинарные файлы (Binary)
+# =========================
+# Указываем Git, что эти файлы бинарные (не пытаться сравнивать по строкам, не менять переносы).
+# Это важно для медиа-контента (Spotify/Media Service) и сертификатов безопасности.
+
+# Изображения
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.svg binary
+*.webp binary
+
+# Аудио и Видео (для вашего Media Service)
+*.mp3 binary
+*.wav binary
+*.ogg binary
+*.m4a binary
+*.mp4 binary
+*.webm binary
+*.ts binary  
+
+# Архивы и сжатые данные
+*.zip binary
+*.tar binary
+*.gz binary
+*.rar binary
+
+# Java / Криптография (важно для Passkeys и JWT)
+*.class binary
+*.jar binary
+*.war binary
+*.jks binary   
+*.p12 binary   
+*.key binary
+*.crt binary
+*.der binary

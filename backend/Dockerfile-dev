@@ -1,0 +1,19 @@
+FROM eclipse-temurin:25-jdk-noble
+
+WORKDIR /app
+
+ARG MODULE_NAME
+ENV MODULE_NAME=${MODULE_NAME}
+
+RUN apt-get update && apt-get install -y findutils
+
+COPY gradle/ gradle/
+COPY gradlew settings.gradle.kts ./
+
+COPY ${MODULE_NAME}/build.gradle.kts ${MODULE_NAME}/
+
+RUN chmod +x ./gradlew
+
+RUN ./gradlew :${MODULE_NAME}:dependencies --no-daemon || true
+
+CMD sh -c "./gradlew :${MODULE_NAME}:bootRun --args='--spring.profiles.active=dev' -t"

@@ -1,0 +1,186 @@
+name: pulse-dev
+
+services:
+  # Postgres + UI
+  postgres:
+    image: postgres:17-alpine
+    container_name: pulse-postgres
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: pulse_db
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./docker/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    networks:
+      - pulse-net
+
+  pgadmin:
+    image: dpage/pgadmin4
+    container_name: pulse-pgadmin
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@admin.com
+      PGADMIN_DEFAULT_PASSWORD: admin
+      PGADMIN_CONFIG_SERVER_MODE: 'False'
+      PGADMIN_CONFIG_MASTER_PASSWORD_REQUIRED: 'False'
+    ports:
+      - "5050:80"
+    volumes:
+      - ./docker/pgadmin/servers.json:/pgadmin4/servers.json
+    depends_on:
+      - postgres
+    networks:
+      - pulse-net
+
+  # MINIO
+  minio:
+    image: minio/minio
+    container_name: pulse-minio
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+    volumes:
+      - minio_data:/data
+    command: server /data --console-address ":9001"
+    networks:
+      - pulse-net
+
+  # Redis + UI
+  redis:
+    image: redis:7-alpine
+    container_name: pulse-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - pulse-net
+
+  redis-insight:
+    image: redis/redisinsight:latest
+    container_name: pulse-redis-insight
+    ports:
+      - "8001:8001"
+    environment:
+      - RI_APP_PORT=8001
+    depends_on:
+      - redis
+    networks:
+      - pulse-net
+
+  # MailHog + UI
+  mailhog:
+    image: mailhog/mailhog:latest
+    container_name: pulse-mailhog
+    ports:
+      - "1025:1025"   # SMTP
+      - "8025:8025"   # Web UI
+    networks:
+      - pulse-net
+
+  # Kafka + UI
+  kafka:
+    image: apache/kafka:3.7.2
+    container_name: pulse-kafka
+    profiles:
+      - kafka
+    ports:
+      - "9092:9092"
+    environment:
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@localhost:9093
+      KAFKA_LISTENERS: PLAINTEXT://:9092,CONTROLLER://:9093
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      CLUSTER_ID: "MkU3OEVBNTcwNTJENDM2Qk"
+    volumes:
+      - kafka_data:/var/lib/kafka/data
+    networks:
+      - pulse-net
+
+  kafka-ui:
+    image: provectuslabs/kafka-ui:latest
+    container_name: pulse-kafka-ui
+    profiles:
+      - kafka
+    ports:
+      - "8080:8080"
+    environment:
+      KAFKA_CLUSTERS_0_NAME: local
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:9092
+    depends_on:
+      - kafka
+    networks:
+      - pulse-net
+
+  # Services
+  gateway:
+    build:
+      context: .
+      dockerfile: Dockerfile-dev
+      args:
+        MODULE_NAME: gateway-service
+    container_name: pulse-gateway
+    profiles:
+      - java
+    ports:
+      - "8000:8000"
+    volumes:
+      - .:/app
+      - gradle_cache:/home/gradle/.gradle
+      - /app/.gradle
+    environment:
+      - SPRING_DATA_REDIS_HOST=redis
+      - SPRING_DATA_REDIS_PORT=6379
+    depends_on:
+      - redis
+      - postgres
+    networks:
+      - pulse-net
+
+  identity:
+    build:
+      context: .
+      dockerfile: Dockerfile-dev
+      args:
+        MODULE_NAME: identity-service
+    container_name: pulse-identity
+    profiles:
+      - java
+    ports:
+      - "8081:8081"
+    volumes:
+      - .:/app
+      - gradle_cache:/home/gradle/.gradle
+      - /app/.gradle
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/identity_db
+      - SPRING_DATASOURCE_USERNAME=postgres
+      - SPRING_DATASOURCE_PASSWORD=postgres
+
+      - SPRING_DATA_REDIS_HOST=redis
+      - SPRING_DATA_REDIS_PORT=6379
+    depends_on:
+      - redis
+      - postgres
+    networks:
+      - pulse-net
+
+networks:
+  pulse-net:
+    name: pulse_dev_network
+
+volumes:
+  postgres_data:
+  minio_data:
+  redis_data:
+  kafka_data:
+  gradle_cache:
