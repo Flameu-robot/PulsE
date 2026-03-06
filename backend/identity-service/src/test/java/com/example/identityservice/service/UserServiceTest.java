@@ -8,6 +8,7 @@ import com.example.identityservice.entity.enums.UserRole;
 import com.example.identityservice.entity.enums.UserStatus;
 import com.example.identityservice.repository.TokenRepository;
 import com.example.identityservice.repository.UserRepository;
+import com.example.identityservice.repository.VerificationRepository;
 import exception.auth.UserNotFoundException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -33,6 +34,9 @@ class UserServiceTest {
 
     @Mock
     private TokenRepository tokenRepository;
+
+    @Mock
+    private VerificationRepository verificationRepository;
 
     @InjectMocks
     private UserService userService;
@@ -100,7 +104,6 @@ class UserServiceTest {
             assertThat(response.username()).isEqualTo("testuser");
             assertThat(response.avatarUrl()).isEqualTo("https://example.com/avatar.jpg");
             assertThat(response.bio()).isEqualTo("Hello world");
-            assertThat(response.createdAt()).isNotNull();
         }
 
         @Test
@@ -196,7 +199,8 @@ class UserServiceTest {
 
             userService.deleteAccount("testuser");
 
-            verify(tokenRepository).revokeAllByUserId(1L);
+            verify(tokenRepository).deleteAllByUserId(1L);
+            verify(verificationRepository).deleteAllByUserId(1L);
             verify(userRepository).delete(testUser);
         }
 

@@ -1,5 +1,7 @@
 package com.example.identityservice.integration;
 
+import com.example.identityservice.config.RedisCleanup;
+import com.example.identityservice.config.RedisTestContainerConfig;
 import com.example.identityservice.dto.request.LoginRequest;
 import com.example.identityservice.dto.request.RegisterRequest;
 import com.example.identityservice.dto.response.AuthResponse;
@@ -24,10 +26,13 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
-class AuthIntegrationTest {
+class AuthIntegrationTest extends RedisTestContainerConfig {
 
     @Autowired
     private MockMvc mockMvc;
+
+    @Autowired
+    private RedisCleanup redisCleanup;
 
     private ObjectMapper objectMapper;
 
@@ -39,6 +44,7 @@ class AuthIntegrationTest {
         objectMapper = new ObjectMapper();
         objectMapper.registerModule(new JavaTimeModule());
         userRepository.deleteAll();
+        redisCleanup.flushAll();
     }
 
     private void activateUser(String username) {

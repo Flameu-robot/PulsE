@@ -1,5 +1,7 @@
 package com.example.identityservice.controller;
 
+import com.example.identityservice.config.RedisCleanup;
+import com.example.identityservice.config.RedisTestContainerConfig;
 import com.example.identityservice.dto.request.RegisterRequest;
 import com.example.identityservice.dto.response.AuthResponse;
 import com.example.identityservice.service.AuthService;
@@ -26,10 +28,13 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @SpringBootTest
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
-class AuthControllerTest {
+class AuthControllerTest extends RedisTestContainerConfig {
 
     @Autowired
     private MockMvc mockMvc;
+
+    @Autowired
+    private RedisCleanup redisCleanup;
 
     private ObjectMapper objectMapper;
 
@@ -47,6 +52,7 @@ class AuthControllerTest {
     @BeforeEach
     void setUp() {
         objectMapper = new ObjectMapper();
+        redisCleanup.flushRateLimits();
     }
 
     @Nested
@@ -136,6 +142,31 @@ class AuthControllerTest {
                     .andExpect(status().isConflict())
                     .andExpect(jsonPath("$.error").value("CONFLICT"));
         }
+
+        @Test
+        @DisplayName("should return 429 when rate limited")
+        void shouldReturn429WhenRateLimited() throws Exception {
+            when(authService.register(any(), any())).thenReturn(successResponse);
+
+            RegisterRequest request = new RegisterRequest("testuser", "test@test.com", "password123");
+            String body = objectMapper.writeValueAsString(request);
+
+            // register имеет лимит 5 запросов в 60 секунд
+            for (int i = 0; i < 5; i++) {
+                mockMvc.perform(post("/api/auth/register")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(body))
+                        .andExpect(status().isCreated());
+            }
+
+            // 6-й запрос должен быть заблокирован
+            mockMvc.perform(post("/api/auth/register")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(body))
+                    .andExpect(status().isTooManyRequests())
+                    .andExpect(jsonPath("$.error").value("TOO_MANY_REQUESTS"))
+                    .andExpect(header().exists("Retry-After"));
+        }
     }
 
     @Nested
@@ -166,6 +197,28 @@ class AuthControllerTest {
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(body))
                     .andExpect(status().isUnprocessableEntity());
+        }
+
+        @Test
+        @DisplayName("should return 429 when rate limited")
+        void shouldReturn429WhenLoginRateLimited() throws Exception {
+            when(authService.login(any(), any())).thenReturn(successResponse);
+
+            String body = "{\"login\":\"testuser\",\"password\":\"password123\"}";
+
+            // login имеет лимит 10 запросов в 60 секунд
+            for (int i = 0; i < 10; i++) {
+                mockMvc.perform(post("/api/auth/login")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(body))
+                        .andExpect(status().isOk());
+            }
+
+            // 11-й запрос должен быть заблокирован
+            mockMvc.perform(post("/api/auth/login")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(body))
+                    .andExpect(status().isTooManyRequests());
         }
     }
 
@@ -238,5 +291,4 @@ class AuthControllerTest {
                     .andExpect(status().isUnprocessableEntity());
         }
     }
-
 }
