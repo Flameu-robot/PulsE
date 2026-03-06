@@ -7,6 +7,23 @@ spring:
         webflux:
           default-filters:
             - DedupeResponseHeader=Access-Control-Allow-Credentials Access-Control-Allow-Origin
+
+          routes:
+            # Identity service
+            - id: identity-service
+              uri: ${IDENTITY_SERVICE_URL:http://localhost:8081}
+              predicates:
+                - Path=/api/auth/**,/api/users/**
+              filters:
+                - StripPrefix=0
+
+            - id: identity-service-docs
+              uri: ${IDENTITY_SERVICE_URL:http://localhost:8081}
+              predicates:
+                - Path=/v3/api-docs/identity-service
+              filters:
+                - RewritePath=/v3/api-docs/identity-service, /v3/api-docs
+
           globalcors:
             cors-configurations:
               '[/**]':
@@ -21,7 +38,7 @@ spring:
                 allow-credentials: false
 
 jwt:
-  secret: "SECRETKEYSECRETKEYSECRETKEYSECRETKEYSECRETKEYSECRETKEYSECRETKEYSECRETKEYSECRETKEYSECRETKEY"
+  secret: ${JWT_SECRET:dev-super-secret-key-that-is-at-least-256-bits-long-for-hmac-sha256-algorithm}
 
 management:
   endpoints:

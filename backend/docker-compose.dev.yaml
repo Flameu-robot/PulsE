@@ -138,6 +138,7 @@ services:
       - gradle_cache:/home/gradle/.gradle
       - /app/.gradle
     environment:
+      - IDENTITY_SERVICE_URL=http://identity-service:8081
       - SPRING_DATA_REDIS_HOST=redis
       - SPRING_DATA_REDIS_PORT=6379
     depends_on:

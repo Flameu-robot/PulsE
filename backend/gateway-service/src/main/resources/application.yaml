@@ -14,3 +14,18 @@ spring:
 server:
   port: 8000
   shutdown: graceful
+
+springdoc:
+  api-docs:
+    enabled: true
+    path: /v3/api-docs
+  swagger-ui:
+    enabled: true
+    path: /swagger-ui.html
+    config-url: /v3/api-docs/swagger-config
+    validator-url: ""
+    urls:
+      - name: Identity Service
+        url: /v3/api-docs/identity-service
+      - name: Product Service
+        url: /v3/api-docs/product-service

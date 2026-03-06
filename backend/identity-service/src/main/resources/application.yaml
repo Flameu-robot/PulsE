@@ -80,6 +80,8 @@ jwt:
     expiration: 2592000000
 
 app:
+  gateway:
+    url: ${GATEWAY_URL:http://localhost:8000}
   kafka:
     topics:
       user-created: user.created
@@ -115,7 +117,7 @@ management:
 
 springdoc:
   api-docs:
+    enabled: true
     path: /v3/api-docs
   swagger-ui:
-    path: /swagger-ui.html
-    operations-sorter: method
+    enabled: true
