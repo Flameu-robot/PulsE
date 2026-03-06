@@ -1,6 +1,7 @@
 name: pulse-dev
 
 services:
+
   # Postgres + UI
   postgres:
     image: postgres:17-alpine
@@ -78,8 +79,8 @@ services:
     image: mailhog/mailhog:latest
     container_name: pulse-mailhog
     ports:
-      - "1025:1025"   # SMTP
-      - "8025:8025"   # Web UI
+      - "1025:1025"
+      - "8025:8025"
     networks:
       - pulse-net
 
@@ -121,11 +122,12 @@ services:
     networks:
       - pulse-net
 
-  # Services
+  # JAVA-СЕРВИСЫ
+
   gateway:
     build:
       context: .
-      dockerfile: Dockerfile-dev
+      dockerfile: Dockerfile-prod
       args:
         MODULE_NAME: gateway-service
     container_name: pulse-gateway
@@ -133,14 +135,17 @@ services:
       - java
     ports:
       - "8000:8000"
-    volumes:
-      - .:/app
-      - gradle_cache:/home/gradle/.gradle
-      - /app/.gradle
     environment:
+      - SPRING_PROFILES_ACTIVE=dev
       - IDENTITY_SERVICE_URL=http://identity-service:8081
       - SPRING_DATA_REDIS_HOST=redis
       - SPRING_DATA_REDIS_PORT=6379
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+        reservations:
+          memory: 300M
     depends_on:
       - redis
       - postgres
@@ -150,7 +155,7 @@ services:
   identity:
     build:
       context: .
-      dockerfile: Dockerfile-dev
+      dockerfile: Dockerfile-prod
       args:
         MODULE_NAME: identity-service
     container_name: pulse-identity
@@ -158,17 +163,19 @@ services:
       - java
     ports:
       - "8081:8081"
-    volumes:
-      - .:/app
-      - gradle_cache:/home/gradle/.gradle
-      - /app/.gradle
     environment:
+      - SPRING_PROFILES_ACTIVE=dev
       - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/identity_db
       - SPRING_DATASOURCE_USERNAME=postgres
       - SPRING_DATASOURCE_PASSWORD=postgres
-
       - SPRING_DATA_REDIS_HOST=redis
       - SPRING_DATA_REDIS_PORT=6379
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+        reservations:
+          memory: 300M
     depends_on:
       - redis
       - postgres
@@ -184,4 +191,3 @@ volumes:
   minio_data:
   redis_data:
   kafka_data:
-  gradle_cache:
