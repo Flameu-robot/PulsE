@@ -1,5 +1,5 @@
 docker compose -f docker-compose.dev.yaml up -d
-docker compose -f docker-compose.dev.yaml build gateway --no-cache 
-docker compose -f docker-compose.dev.yaml up -d gateway
-docker compose -f docker-compose.dev.yaml build identity --no-cache
-docker compose -f docker-compose.dev.yaml up -d identity
+docker compose -f docker-compose.dev.yaml build gateway-service --no-cache 
+docker compose -f docker-compose.dev.yaml up -d gateway-service
+docker compose -f docker-compose.dev.yaml build identity-service --no-cache
+docker compose -f docker-compose.dev.yaml up -d identity-service
