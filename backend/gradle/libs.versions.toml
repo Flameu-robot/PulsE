@@ -1,18 +1,17 @@
 [versions]
 java                    = "25"
-springBoot              = "4.0.3"
+springBoot              = "3.4.2"
 dependencyManagement    = "1.1.7"
 jjwt                    = "0.12.6"
 webauthn                = "2.5.3"
 minio                   = "8.5.14"
 springdoc               = "2.8.4"
 mapstruct               = "1.6.3"
-hypersistence           = "3.9.0"
+hypersistence           = "3.9.2"
 testcontainers          = "1.20.4"
 lombok                  = "1.18.42"
 springCloud             = "2025.1.1"
 jspecify                = "1.0.0"
-
 
 [libraries]
 spring-boot-starter                         = { group = "org.springframework.boot", name = "spring-boot-starter",                         version.ref = "springBoot" }
@@ -57,7 +56,6 @@ reactor-test                                = { group = "io.projectreactor", nam
 
 
 [bundles]
-
 spring-base = [
     "spring-boot-starter",
     "spring-boot-starter-web",
