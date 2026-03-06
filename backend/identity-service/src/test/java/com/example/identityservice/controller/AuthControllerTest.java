@@ -1,0 +1,294 @@
+package com.example.identityservice.controller;
+
+import com.example.identityservice.config.RedisCleanup;
+import com.example.identityservice.config.RedisTestContainerConfig;
+import com.example.identityservice.dto.request.RegisterRequest;
+import com.example.identityservice.dto.response.AuthResponse;
+import com.example.identityservice.service.AuthService;
+import exception.auth.UserAlreadyExistsException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Nested;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
+import org.springframework.http.MediaType;
+import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.test.web.servlet.MockMvc;
+
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+
+@SpringBootTest
+@AutoConfigureMockMvc
+@ActiveProfiles("test")
+class AuthControllerTest extends RedisTestContainerConfig {
+
+    @Autowired
+    private MockMvc mockMvc;
+
+    @Autowired
+    private RedisCleanup redisCleanup;
+
+    private ObjectMapper objectMapper;
+
+    @MockitoBean
+    private AuthService authService;
+
+    private final AuthResponse successResponse = new AuthResponse(
+            "access-token",
+            "refresh-token",
+            1L,
+            "testuser",
+            "USER"
+    );
+
+    @BeforeEach
+    void setUp() {
+        objectMapper = new ObjectMapper();
+        redisCleanup.flushRateLimits();
+    }
+
+    @Nested
+    @DisplayName("POST /api/auth/register")
+    class Register {
+
+        @Test
+        @DisplayName("should return 201 on successful registration")
+        void shouldReturn201OnSuccess() throws Exception {
+            when(authService.register(any(), any())).thenReturn(successResponse);
+
+            RegisterRequest request = new RegisterRequest("testuser", "test@test.com", "password123");
+
+            mockMvc.perform(post("/api/auth/register")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(request)))
+                    .andExpect(status().isCreated())
+                    .andExpect(jsonPath("$.accessToken").value("access-token"))
+                    .andExpect(jsonPath("$.refreshToken").value("refresh-token"))
+                    .andExpect(jsonPath("$.userId").value(1))
+                    .andExpect(jsonPath("$.username").value("testuser"))
+                    .andExpect(jsonPath("$.role").value("USER"));
+        }
+
+        @Test
+        @DisplayName("should return 422 on invalid username")
+        void shouldReturn422OnInvalidUsername() throws Exception {
+            RegisterRequest request = new RegisterRequest("ab", "test@test.com", "password123");
+
+            mockMvc.perform(post("/api/auth/register")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(request)))
+                    .andExpect(status().isUnprocessableEntity())
+                    .andExpect(jsonPath("$.error").value("VALIDATION"))
+                    .andExpect(jsonPath("$.details.username").exists());
+        }
+
+        @Test
+        @DisplayName("should return 422 on invalid email")
+        void shouldReturn422OnInvalidEmail() throws Exception {
+            RegisterRequest request = new RegisterRequest("testuser", "not-an-email", "password123");
+
+            mockMvc.perform(post("/api/auth/register")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(request)))
+                    .andExpect(status().isUnprocessableEntity())
+                    .andExpect(jsonPath("$.details.email").exists());
+        }
+
+        @Test
+        @DisplayName("should return 422 on short password")
+        void shouldReturn422OnShortPassword() throws Exception {
+            RegisterRequest request = new RegisterRequest("testuser", "test@test.com", "short");
+
+            mockMvc.perform(post("/api/auth/register")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(request)))
+                    .andExpect(status().isUnprocessableEntity())
+                    .andExpect(jsonPath("$.details.password").exists());
+        }
+
+        @Test
+        @DisplayName("should return 422 on blank fields")
+        void shouldReturn422OnBlankFields() throws Exception {
+            RegisterRequest request = new RegisterRequest("", "", "");
+
+            mockMvc.perform(post("/api/auth/register")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(request)))
+                    .andExpect(status().isUnprocessableEntity())
+                    .andExpect(jsonPath("$.details.username").exists())
+                    .andExpect(jsonPath("$.details.email").exists())
+                    .andExpect(jsonPath("$.details.password").exists());
+        }
+
+        @Test
+        @DisplayName("should return 409 when username exists")
+        void shouldReturn409WhenUsernameExists() throws Exception {
+            when(authService.register(any(), any()))
+                    .thenThrow(new UserAlreadyExistsException("Username", "testuser"));
+
+            RegisterRequest request = new RegisterRequest("testuser", "test@test.com", "password123");
+
+            mockMvc.perform(post("/api/auth/register")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(request)))
+                    .andExpect(status().isConflict())
+                    .andExpect(jsonPath("$.error").value("CONFLICT"));
+        }
+
+        @Test
+        @DisplayName("should return 429 when rate limited")
+        void shouldReturn429WhenRateLimited() throws Exception {
+            when(authService.register(any(), any())).thenReturn(successResponse);
+
+            RegisterRequest request = new RegisterRequest("testuser", "test@test.com", "password123");
+            String body = objectMapper.writeValueAsString(request);
+
+            // register имеет лимит 5 запросов в 60 секунд
+            for (int i = 0; i < 5; i++) {
+                mockMvc.perform(post("/api/auth/register")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(body))
+                        .andExpect(status().isCreated());
+            }
+
+            // 6-й запрос должен быть заблокирован
+            mockMvc.perform(post("/api/auth/register")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(body))
+                    .andExpect(status().isTooManyRequests())
+                    .andExpect(jsonPath("$.error").value("TOO_MANY_REQUESTS"))
+                    .andExpect(header().exists("Retry-After"));
+        }
+    }
+
+    @Nested
+    @DisplayName("POST /api/auth/login")
+    class Login {
+
+        @Test
+        @DisplayName("should return 200 on successful login")
+        void shouldReturn200OnSuccess() throws Exception {
+            when(authService.login(any(), any())).thenReturn(successResponse);
+
+            String body = "{\"login\":\"testuser\",\"password\":\"password123\"}";
+
+            mockMvc.perform(post("/api/auth/login")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(body))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.accessToken").value("access-token"))
+                    .andExpect(jsonPath("$.username").value("testuser"));
+        }
+
+        @Test
+        @DisplayName("should return 422 on blank login")
+        void shouldReturn422OnBlankLogin() throws Exception {
+            String body = "{\"login\":\"\",\"password\":\"password123\"}";
+
+            mockMvc.perform(post("/api/auth/login")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(body))
+                    .andExpect(status().isUnprocessableEntity());
+        }
+
+        @Test
+        @DisplayName("should return 429 when rate limited")
+        void shouldReturn429WhenLoginRateLimited() throws Exception {
+            when(authService.login(any(), any())).thenReturn(successResponse);
+
+            String body = "{\"login\":\"testuser\",\"password\":\"password123\"}";
+
+            // login имеет лимит 10 запросов в 60 секунд
+            for (int i = 0; i < 10; i++) {
+                mockMvc.perform(post("/api/auth/login")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(body))
+                        .andExpect(status().isOk());
+            }
+
+            // 11-й запрос должен быть заблокирован
+            mockMvc.perform(post("/api/auth/login")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(body))
+                    .andExpect(status().isTooManyRequests());
+        }
+    }
+
+    @Nested
+    @DisplayName("POST /api/auth/logout")
+    class Logout {
+
+        @Test
+        @DisplayName("should return 401 without token")
+        void shouldReturn401WithoutToken() throws Exception {
+            mockMvc.perform(post("/api/auth/logout"))
+                    .andExpect(status().isUnauthorized());
+        }
+    }
+
+    @Nested
+    @DisplayName("GET /api/auth/me")
+    class GetCurrentUser {
+
+        @Test
+        @DisplayName("should return 401 without token")
+        void shouldReturn401WithoutToken() throws Exception {
+            mockMvc.perform(get("/api/auth/me"))
+                    .andExpect(status().isUnauthorized());
+        }
+    }
+
+    @Nested
+    @DisplayName("POST /api/auth/password/change")
+    class ChangePassword {
+
+        @Test
+        @DisplayName("should return 401 without token")
+        void shouldReturn401WithoutToken() throws Exception {
+            String body = "{\"currentPassword\":\"old123456\",\"newPassword\":\"new123456\"}";
+
+            mockMvc.perform(post("/api/auth/password/change")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(body))
+                    .andExpect(status().isUnauthorized());
+        }
+    }
+
+    @Nested
+    @DisplayName("POST /api/auth/login with email")
+    class LoginWithEmail {
+
+        @Test
+        @DisplayName("should return 200 on login with email")
+        void shouldReturn200OnLoginWithEmail() throws Exception {
+            when(authService.login(any(), any())).thenReturn(successResponse);
+
+            String body = "{\"login\":\"test@test.com\",\"password\":\"password123\"}";
+
+            mockMvc.perform(post("/api/auth/login")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(body))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.accessToken").value("access-token"));
+        }
+
+        @Test
+        @DisplayName("should return 422 on blank login")
+        void shouldReturn422OnBlankLogin() throws Exception {
+            String body = "{\"login\":\"\",\"password\":\"password123\"}";
+
+            mockMvc.perform(post("/api/auth/login")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(body))
+                    .andExpect(status().isUnprocessableEntity());
+        }
+    }
+}

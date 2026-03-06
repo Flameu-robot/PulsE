@@ -1,17 +1,22 @@
 [versions]
 java                    = "25"
-springBoot              = "3.4.2"
+springBoot              = "4.0.3"
 dependencyManagement    = "1.1.7"
 jjwt                    = "0.12.6"
 webauthn                = "2.5.3"
 minio                   = "8.5.14"
 springdoc               = "2.8.4"
 mapstruct               = "1.6.3"
-hypersistence           = "3.9.2"
+hypersistence           = "3.15.2"
 testcontainers          = "1.20.4"
 lombok                  = "1.18.42"
 springCloud             = "2025.1.1"
 jspecify                = "1.0.0"
+lombok                  = "1.18.42"
+flyway                  = "12.0.2"
+kafkaClients            = "4.2.0"
+springKafka             = "4.0.3"
+hibernate               = "7.2.4.Final"
 
 [libraries]
 spring-boot-starter                         = { group = "org.springframework.boot", name = "spring-boot-starter",                         version.ref = "springBoot" }
@@ -27,11 +32,17 @@ spring-boot-starter-mail                    = { group = "org.springframework.boo
 spring-boot-starter-websocket               = { group = "org.springframework.boot", name = "spring-boot-starter-websocket",             version.ref = "springBoot" }
 spring-cloud-starter-gateway                = { group = "org.springframework.cloud", name = "spring-cloud-starter-gateway-server-webflux" }
 spring-cloud-dependencies                   = { group = "org.springframework.cloud", name = "spring-cloud-dependencies",                version.ref = "springCloud" }
+spring-boot-starter-webmvc-test             = { group = "org.springframework.boot", name = "spring-boot-starter-webmvc-test", version.ref = "springBoot" }
+spring-boot-starter-flyway                  = { group = "org.springframework.boot", name = "spring-boot-starter-flyway" }
 spring-boot-configuration-processor         = { group = "org.springframework.boot", name = "spring-boot-configuration-processor",       version.ref = "springBoot" }
-spring-kafka                                = { group = "org.springframework.kafka", name = "spring-kafka" }
+spring-kafka                                = { group = "org.springframework.kafka", name = "spring-kafka", version.ref = "springKafka" }
+spring-kafka-test                           = { group = "org.springframework.kafka", name = "spring-kafka-test", version.ref = "springKafka" }
+kafka-clients                               = { group = "org.apache.kafka", name = "kafka-clients", version.ref = "kafkaClients" }
+spring-boot-starter-kafka                   = { group = "org.springframework.boot", name = "spring-boot-starter-kafka", version.ref = "springBoot" }
 postgresql                                  = { group = "org.postgresql",    name = "postgresql" }
-flyway-core                                 = { group = "org.flywaydb",      name = "flyway-core" }
-flyway-postgresql                           = { group = "org.flywaydb",      name = "flyway-database-postgresql" }
+hibernate-core                              = { group = "org.hibernate.orm", name = "hibernate-core", version.ref = "hibernate" }
+flyway-core                                 = { group = "org.flywaydb", name = "flyway-core", version.ref = "flyway" }
+flyway-database-postgresql                  = { group = "org.flywaydb", name = "flyway-database-postgresql", version.ref = "flyway" }
 jjwt-api                                    = { group = "io.jsonwebtoken", name = "jjwt-api",     version.ref = "jjwt" }
 jjwt-impl                                   = { group = "io.jsonwebtoken", name = "jjwt-impl",    version.ref = "jjwt" }
 jjwt-jackson                                = { group = "io.jsonwebtoken", name = "jjwt-jackson",  version.ref = "jjwt" }
@@ -44,10 +55,9 @@ micrometer-prometheus                       = { group = "io.micrometer", name = 
 lombok                                      = { group = "org.projectlombok", name = "lombok", version.ref = "lombok" }
 mapstruct                                   = { group = "org.mapstruct", name = "mapstruct",           version.ref = "mapstruct" }
 mapstruct-processor                         = { group = "org.mapstruct", name = "mapstruct-processor",  version.ref = "mapstruct" }
-hypersistence-utils                         = { group = "io.hypersistence", name = "hypersistence-utils-hibernate-63", version.ref = "hypersistence" }
+hypersistence-utils                         = { group = "io.hypersistence", name = "hypersistence-utils-hibernate-70", version.ref = "hypersistence" }
 spring-boot-starter-test                    = { group = "org.springframework.boot",  name = "spring-boot-starter-test",  version.ref = "springBoot" }
 spring-security-test                        = { group = "org.springframework.security", name = "spring-security-test" }
-spring-kafka-test                           = { group = "org.springframework.kafka",    name = "spring-kafka-test" }
 junit-launcher                              = { group = "org.junit.platform",           name = "junit-platform-launcher" }
 testcontainers-junit                        = { group = "org.testcontainers", name = "junit-jupiter",  version.ref = "testcontainers" }
 testcontainers-postgresql                   = { group = "org.testcontainers", name = "postgresql",     version.ref = "testcontainers" }
@@ -82,13 +92,14 @@ webauthn = [
 
 database = [
     "flyway-core",
-    "flyway-postgresql",
+    "flyway-database-postgresql",
+    "spring-boot-starter-flyway"
 ]
 
 testcontainers = [
     "testcontainers-junit",
     "testcontainers-postgresql",
-    "testcontainers-kafka",
+    "testcontainers-kafka"
 ]
 
 testing = [
@@ -107,6 +118,13 @@ gateway = [
     "spring-cloud-starter-gateway",
     "spring-boot-starter-security",
     "spring-boot-starter-actuator",
+]
+
+kafka = [
+    "spring-kafka",
+    "kafka-clients",
+    "spring-boot-starter-validation",
+    "spring-boot-starter-kafka"
 ]
 
 [plugins]

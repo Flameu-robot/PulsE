@@ -61,13 +61,13 @@
 
 Если пользователь входит через Google/GitHub.
 
-|Поле|Тип данных|Описание|
-|---|---|---|
-|**id**|`BIGSERIAL`|PK.|
-|**user_id**|`BIGINT`|FK на таблицу `users`.|
-|**provider**|`VARCHAR(20)`|Провайдер: `GOOGLE`, `GITHUB`, `FACEBOOK`.|
-|**provider_id**|`VARCHAR(255)`|ID пользователя у провайдера.|
-|**linked_at**|`TIMESTAMPTZ`|Дата привязки.|
+| Поле            | Тип данных     | Описание                       |
+| --------------- | -------------- | ------------------------------ |
+| **id**          | `BIGSERIAL`    | PK.                            |
+| **user_id**     | `BIGINT`       | FK на таблицу `users`.         |
+| **provider**    | `VARCHAR(20)`  | Провайдер: `GOOGLE`, `GITHUB`. |
+| **provider_id** | `VARCHAR(255)` | ID пользователя у провайдера.  |
+| **linked_at**   | `TIMESTAMPTZ`  | Дата привязки.                 |
 
 #### 4) Таблица: `Tokens`
 

@@ -1,4 +1,4 @@
-package com.example.identityservice.dependencyconfig;
+package com.example.identityservice.config;
 
 import org.springframework.boot.context.properties.ConfigurationProperties;
 

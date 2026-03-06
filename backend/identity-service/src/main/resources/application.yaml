@@ -4,13 +4,13 @@ spring:
 
   profiles:
     active: dev
+    include:
+      - local
 
   jpa:
     open-in-view: false
     properties:
       hibernate:
-        format_sql: true
-        default_schema: identity
         jdbc:
           time_zone: UTC
           batch_size: 25
@@ -20,16 +20,15 @@ spring:
   flyway:
     enabled: true
     baseline-on-migrate: true
-    schemas:
-      - identity
     locations:
       - classpath:db/migration
 
   jackson:
-    serialization:
-      write-dates-as-timestamps: false
+    date-format: "yyyy-MM-dd'T'HH:mm:ss.SSSZ"
     default-property-inclusion: non_null
     time-zone: UTC
+    deserialization:
+      fail-on-unknown-properties: false
 
   kafka:
     producer:
@@ -37,14 +36,44 @@ spring:
       value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
       acks: all
       retries: 3
+      properties:
+        enable.idempotence: true
+        spring.json.add.type.headers: true
+    consumer:
+      group-id: identity-group
+      auto-offset-reset: earliest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+      properties:
+        spring.json.trusted.packages: "com.pulse.*"
     template:
       default-topic: identity-events
+
+  data:
+    redis:
+      timeout: 2000
+      lettuce:
+        pool:
+          max-active: 8
+          max-idle: 4
+          min-idle: 1
+
+  security:
+    oauth2:
+      client:
+        registration:
+          google:
+            scope: openid,profile,email
+          github:
+            scope: user:email,read:user
 
 server:
   port: 8081
   shutdown: graceful
 
 jwt:
+  secret: ${JWT_SECRET:dev-super-secret-key-that-is-at-least-256-bits-long-for-hmac-sha256-algorithm}
+  issuer: ${JWT_ISSUER:pulse-identity}
   access-token:
     expiration: 900000
   refresh-token:
@@ -57,6 +86,19 @@ app:
       user-updated: user.updated
       user-banned: user.banned
 
+  oauth2:
+        # Разрешённые URL фронтенда для redirect после OAuth
+    authorized-redirect-uris:
+          - http://localhost:3000/oauth2/redirect
+        # Дефолтный redirect если не указан
+    default-redirect-uri: http://localhost:3000/oauth2/redirect
+
+  webauthn:
+    rp-id: localhost
+    rp-name: Pulse
+    origin: http://localhost:3000
+    timeout: 60000
+
 management:
   endpoints:
     web:
@@ -65,3 +107,15 @@ management:
   endpoint:
     health:
       show-details: when_authorized
+      probes:
+        enabled: true
+  metrics:
+    tags:
+      application: ${spring.application.name}
+
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+    operations-sorter: method
