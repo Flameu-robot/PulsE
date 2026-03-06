@@ -13,6 +13,7 @@ import org.springframework.http.server.reactive.ServerHttpRequest;
 import org.springframework.http.server.reactive.ServerHttpResponse;
 import org.jspecify.annotations.NonNull;
 import org.springframework.stereotype.Component;
+import org.springframework.util.AntPathMatcher;
 import org.springframework.web.server.ServerWebExchange;
 import reactor.core.publisher.Mono;
 
@@ -25,23 +26,29 @@ public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
 
     private final JwtUtils jwtUtils;
 
+    private final AntPathMatcher pathMatcher =
+            new AntPathMatcher();
+
     // Список путей, не требующих авторизации
     private final List<String> openApiEndpoints = List.of(
-            // Indentity-service
+            // Identity-service
             "/api/auth/register",
             "/api/auth/login",
             "/api/auth/refresh",
             "/api/auth/password/forgot",
             "/api/auth/password/reset",
-            "/api/auth/webauthn/login/**",
-            "/api/users/{id}",
+            "/api/auth/webauthn/login",
+            "/api/users/",
 
-            "/api/auth/oauth2/**",
-            "/oauth2/**",
+            "/api/auth/oauth2/",
+            "/oauth2/",
 
+            // Swagger
+            "/swagger-ui.html",
             "/swagger-ui/**",
             "/v3/api-docs/**",
-            "/swagger-ui.html"
+            "/v3/api-docs",
+            "/webjars/**"
     );
 
     @SuppressWarnings("NullableProblems")
@@ -62,7 +69,7 @@ public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
         exchange = exchange.mutate().request(sanitizedRequest).build();
 
         // Пропуск открытых эндпоинтов
-        if (openApiEndpoints.stream().anyMatch(path::startsWith)) {
+        if (isOpenEndpoint(path)) {
             return chain.filter(exchange);
         }
 
@@ -96,6 +103,11 @@ public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
                 .build();
 
         return chain.filter(exchange.mutate().request(modifiedRequest).build());
+    }
+
+    private boolean isOpenEndpoint(String path) {
+        return openApiEndpoints.stream()
+                .anyMatch(pattern -> pathMatcher.match(pattern, path));
     }
 
     @SuppressWarnings("NullableProblems")
