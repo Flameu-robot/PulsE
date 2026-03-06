@@ -18,4 +18,8 @@ public interface VerificationRepository extends JpaRepository<VerificationToken,
     @Modifying
     @Query("DELETE FROM VerificationToken v WHERE v.user.id = :userId")
     void deleteAllByUserId(Long userId);
+
+    @Modifying
+    @Query("DELETE FROM VerificationToken vt WHERE vt.expiresAt < CURRENT_TIMESTAMP OR vt.used = true")
+    int deleteExpiredAndUsed();
 }

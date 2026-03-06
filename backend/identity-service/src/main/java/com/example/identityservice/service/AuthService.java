@@ -52,6 +52,9 @@ public class AuthService {
         this.authResponseFactory = authResponseFactory;
     }
 
+    private static final int MAX_FAILED_ATTEMPTS = 5;
+    private static final int LOCK_DURATION_MINUTES = 30;
+
     @Transactional
     public AuthResponse register(RegisterRequest request, HttpServletRequest httpRequest) {
         if (userRepository.existsByUsername(request.username())) {
@@ -87,14 +90,31 @@ public class AuthService {
                     .orElseThrow(InvalidCredentialsException::new);
         }
 
+        if (user.isLocked()) {
+            throw new TokenException("Account is locked until " + user.getLockedUntil() +
+                    ". Try again later.");
+        }
+
         try {
             authenticationManager.authenticate(
                     new UsernamePasswordAuthenticationToken(user.getUsername(), request.password())
             );
         } catch (AuthenticationException e) {
+            user.setFailedLoginAttempts(user.getFailedLoginAttempts() + 1);
+
+            if (user.getFailedLoginAttempts() >= MAX_FAILED_ATTEMPTS) {
+                user.setLockedUntil(OffsetDateTime.now().plusMinutes(LOCK_DURATION_MINUTES));
+                userRepository.save(user);
+                throw new TokenException("Account locked for " + LOCK_DURATION_MINUTES +
+                        " minutes after " + MAX_FAILED_ATTEMPTS + " failed attempts");
+            }
+
+            userRepository.save(user);
             throw new InvalidCredentialsException();
         }
 
+        user.setFailedLoginAttempts(0);
+        user.setLockedUntil(null);
         user.setLastLoginAt(OffsetDateTime.now());
         userRepository.save(user);
 

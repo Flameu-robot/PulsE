@@ -3,6 +3,7 @@ package com.example.identityservice.config;
 import com.example.identityservice.security.JwtAuthenticationFilter;
 import com.example.identityservice.security.OAuth2AuthenticationFailureHandler;
 import com.example.identityservice.security.OAuth2AuthenticationSuccessHandler;
+import com.example.identityservice.security.RateLimitFilter;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -24,15 +25,18 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 public class SecurityConfig {
 
     private final JwtAuthenticationFilter jwtAuthFilter;
+    private final RateLimitFilter rateLimitFilter;
     private final OAuth2AuthenticationSuccessHandler oAuth2SuccessHandler;
     private final OAuth2AuthenticationFailureHandler oAuth2FailureHandler;
 
     public SecurityConfig(
             JwtAuthenticationFilter jwtAuthFilter,
+            RateLimitFilter rateLimitFilter,
             OAuth2AuthenticationSuccessHandler oAuth2SuccessHandler,
             OAuth2AuthenticationFailureHandler oAuth2FailureHandler
     ) {
         this.jwtAuthFilter = jwtAuthFilter;
+        this.rateLimitFilter = rateLimitFilter;
         this.oAuth2SuccessHandler = oAuth2SuccessHandler;
         this.oAuth2FailureHandler = oAuth2FailureHandler;
     }
@@ -90,6 +94,7 @@ public class SecurityConfig {
                             );
                         })
                 )
+                .addFilterBefore(rateLimitFilter, UsernamePasswordAuthenticationFilter.class)
                 .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();

@@ -58,6 +58,13 @@ public class User {
     @Column(name = "last_login_at")
     private OffsetDateTime lastLoginAt;
 
+    @Column(name = "failed_login_attempts", nullable = false)
+    @Builder.Default
+    private int failedLoginAttempts = 0;
+
+    @Column(name = "locked_until")
+    private OffsetDateTime lockedUntil;
+
     @Column(name = "avatar_url", length = 500)
     private String avatarUrl;
 
@@ -125,6 +132,10 @@ public class User {
     public void removeVerificationToken(VerificationToken token) {
         verificationTokens.remove(token);
         token.setUser(null);
+    }
+
+    public boolean isLocked() {
+        return lockedUntil != null && OffsetDateTime.now().isBefore(lockedUntil);
     }
 
     @Override
