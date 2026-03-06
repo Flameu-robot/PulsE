@@ -121,6 +121,27 @@ services:
     networks:
       - pulse-net
 
+  # Services
+  gateway:
+    build:
+      context: .
+      dockerfile: gateway-service/Dockerfile
+    container_name: pulse-gateway
+    ports:
+      - "8000:8000"
+    volumes:
+      - .:/app
+      - gradle_cache:/home/gradle/.gradle
+    environment:
+      - SPRING_PROFILES_ACTIVE=dev
+      - SPRING_DATA_REDIS_HOST=redis
+      - SPRING_DATA_REDIS_PORT=6379
+    depends_on:
+      - redis
+      - postgres
+    networks:
+      - pulse-net
+
 networks:
   pulse-net:
     name: pulse_dev_network
@@ -130,3 +151,4 @@ volumes:
   minio_data:
   redis_data:
   kafka_data:
+  gradle_cache:

@@ -19,6 +19,8 @@ dependencies {
     implementation(libs.bundles.gateway)
     implementation(libs.bundles.jwt)
 
+    developmentOnly("org.springframework.boot:spring-boot-devtools")
+
     compileOnly(libs.lombok)
     annotationProcessor(libs.lombok)
 
