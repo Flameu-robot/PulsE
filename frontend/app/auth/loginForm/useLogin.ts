@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import Cookies from 'js-cookie'
 import { LoginFormData, AuthResponse } from './types'
 import { api } from "@/app/lib/api"
 
@@ -21,6 +22,9 @@ export const useLogin = () => {
             if (authData.accessToken && authData.refreshToken) {
                 localStorage.setItem('accessToken', authData.accessToken)
                 localStorage.setItem('refreshToken', authData.refreshToken)
+
+                Cookies.set('accessToken', authData.accessToken, { expires: 7, sameSite: 'strict' })
+
                 router.push('/main')
             }
         } catch (err: any) {

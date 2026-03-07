@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import Cookies from 'js-cookie'
 import { RegisterFormData, AuthResponse } from './types'
 import { api } from "@/app/lib/api"
 
@@ -20,6 +21,8 @@ export const useRegister = () => {
             if (authData.accessToken && authData.refreshToken) {
                 localStorage.setItem('accessToken', authData.accessToken)
                 localStorage.setItem('refreshToken', authData.refreshToken)
+
+                Cookies.set('accessToken', authData.accessToken, { expires: 7, sameSite: 'strict' })
             }
 
             return true
