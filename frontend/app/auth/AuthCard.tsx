@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import LoginForm from './LoginForm'
-import RegisterForm from './RegisterForm'
+import RegisterForm from './registerForm/RegisterForm'
 import Button from '../components/ui/Button'
 import Divider from '../components/ui/Divider'
 import styles from './AuthCard.module.css'

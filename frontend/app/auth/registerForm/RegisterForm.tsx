@@ -2,27 +2,29 @@
 
 import { useForm } from 'react-hook-form'
 import { motion } from 'framer-motion'
-import { User, Mail, Lock, ArrowRight } from 'lucide-react'
-import Input from '../components/ui/Input'
-import Button from '../components/ui/Button'
-
-interface RegisterFormData {
-    username: string
-    email: string
-    password: string
-    confirmPassword: string
-}
+import { User, Mail, Lock, ArrowRight, Loader2 } from 'lucide-react'
+import Input from '../../components/ui/Input'
+import Button from '../../components/ui/Button'
+import { RegisterFormData } from './types'
+import { useRegister } from './useRegister'
 
 export default function RegisterForm() {
     const { register, handleSubmit, watch, formState: { errors } } = useForm<RegisterFormData>()
+    const { registerUser, isLoading, serverError } = useRegister()
     const password = watch('password')
 
     const onSubmit = (data: RegisterFormData) => {
-        console.log('Register data:', data)
+        registerUser(data)
     }
 
     return (
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+            {serverError && (
+                <div className="p-3 text-sm text-red-400 bg-red-500/10 border border-red-500/20 rounded-lg">
+                    {serverError}
+                </div>
+            )}
+
             <Input
                 label="Username"
                 type="text"
@@ -31,10 +33,7 @@ export default function RegisterForm() {
                 error={errors.username?.message}
                 {...register('username', {
                     required: 'Username is required',
-                    minLength: {
-                        value: 3,
-                        message: 'Username must be at least 3 characters'
-                    }
+                    minLength: { value: 3, message: 'Username must be at least 3 characters' }
                 })}
             />
 
@@ -61,10 +60,7 @@ export default function RegisterForm() {
                 error={errors.password?.message}
                 {...register('password', {
                     required: 'Password is required',
-                    minLength: {
-                        value: 6,
-                        message: 'Password must be at least 6 characters'
-                    },
+                    minLength: { value: 6, message: 'Password must be at least 6 characters' },
                     pattern: {
                         value: /^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d]{6,}$/,
                         message: 'Password must contain at least one letter and one number'
@@ -93,23 +89,22 @@ export default function RegisterForm() {
                 />
                 <label htmlFor="terms" className="text-sm text-gray-400">
                     I agree to the{' '}
-                    <button type="button" className="text-purple-400 hover:text-purple-300">
-                        Terms of Service
-                    </button>{' '}
-                    and{' '}
-                    <button type="button" className="text-purple-400 hover:text-purple-300">
-                        Privacy Policy
-                    </button>
+                    <button type="button" className="text-purple-400 hover:text-purple-300">Terms of Service</button>
+                    {' '}and{' '}
+                    <button type="button" className="text-purple-400 hover:text-purple-300">Privacy Policy</button>
                 </label>
             </div>
 
-            <motion.div
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-            >
-                <Button type="submit" className="w-full group">
-                    Create Account
-                    <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
+            <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+                <Button type="submit" className="w-full group" disabled={isLoading}>
+                    {isLoading ? (
+                        <Loader2 className="w-5 h-5 animate-spin" />
+                    ) : (
+                        <>
+                            Create Account
+                            <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
+                        </>
+                    )}
                 </Button>
             </motion.div>
         </form>
