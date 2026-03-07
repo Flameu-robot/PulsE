@@ -124,7 +124,7 @@ services:
 
   # JAVA-СЕРВИСЫ
 
-  gateway:
+  gateway-service:
     build:
       context: .
       dockerfile: Dockerfile-prod
@@ -152,7 +152,7 @@ services:
     networks:
       - pulse-net
 
-  identity:
+  identity-service:
     build:
       context: .
       dockerfile: Dockerfile-prod
