@@ -29,7 +29,7 @@ public class CustomUserDetailsService implements UserDetailsService {
         return new org.springframework.security.core.userdetails.User(
                 user.getUsername(),
                 user.getPasswordHash() != null ? user.getPasswordHash() : "",
-                user.getStatus() == UserStatus.ACTIVE,
+                user.getStatus() == UserStatus.ACTIVE || user.getStatus() == UserStatus.PENDING,
                 true,
                 true,
                 user.getStatus() != UserStatus.BANNED,
