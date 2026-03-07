@@ -2,15 +2,21 @@
 
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import LoginForm from './LoginForm'
+import LoginForm from './loginForm/LoginForm'
 import RegisterForm from './registerForm/RegisterForm'
 import Button from '../components/ui/Button'
-import Divider from '../components/ui/Divider'
 import styles from './AuthCard.module.css'
 import { cn } from '@/app/lib/utils'
 
 export default function AuthCard() {
     const [isLogin, setIsLogin] = useState(true)
+    const [successMessage, setSuccessMessage] = useState<string | null>(null)
+
+    const handleRegisterSuccess = () => {
+        setIsLogin(true)
+        setSuccessMessage('Registration successful! Please log in.')
+        setTimeout(() => setSuccessMessage(null), 5000)
+    }
 
     return (
         <motion.div
@@ -19,7 +25,6 @@ export default function AuthCard() {
             transition={{ duration: 0.5, ease: 'easeOut' }}
             className={styles.authCard}
         >
-            {/* Header Section */}
             <div className="text-center mb-8">
                 <motion.h2
                     key={isLogin ? 'login-title' : 'reg-title'}
@@ -43,7 +48,19 @@ export default function AuthCard() {
                 </motion.p>
             </div>
 
-            {/* Tab Switcher */}
+            <AnimatePresence>
+                {successMessage && (
+                    <motion.div
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: 'auto', opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        className="mb-6 p-3 text-sm text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 rounded-lg text-center"
+                    >
+                        {successMessage}
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
             <div className={styles.tabContainer}>
                 <button
                     onClick={() => setIsLogin(true)}
@@ -65,7 +82,6 @@ export default function AuthCard() {
                 </button>
             </div>
 
-            {/* Forms Section */}
             <div className="relative overflow-hidden min-h-[300px]">
                 <AnimatePresence mode="wait" initial={false}>
                     <motion.div
@@ -76,25 +92,22 @@ export default function AuthCard() {
                         transition={{ duration: 0.2, ease: 'easeInOut' }}
                         className={styles.formContainer}
                     >
-                        {isLogin ? <LoginForm /> : <RegisterForm />}
+                        {isLogin ? <LoginForm /> : <RegisterForm onSuccess={handleRegisterSuccess} />}
                     </motion.div>
                 </AnimatePresence>
             </div>
 
-            {/* Исправленный Divider */}
             <div className="relative my-8">
                 <div className="absolute inset-0 flex items-center">
                     <span className="w-full border-t border-purple-500/20"></span>
                 </div>
                 <div className="relative flex justify-center text-xs uppercase">
-                    {/* Важно: bg-[#111827] соответствует bg-gray-900 вашей карточки */}
                     <span className="bg-[#111827] px-4 text-gray-500 font-medium tracking-wider">
                         or continue with
                     </span>
                 </div>
             </div>
 
-            {/* Social Auth Section */}
             <div className={styles.socialGrid}>
                 <Button variant="outline" className="border-purple-500/20 bg-gray-800/40 hover:bg-purple-500/10 text-gray-300">
                     <img
@@ -114,7 +127,6 @@ export default function AuthCard() {
                 </Button>
             </div>
 
-            {/* Footer Text */}
             <p className="mt-8 text-center text-[11px] text-gray-500 leading-relaxed uppercase tracking-widest opacity-60">
                 Secured & encrypted connection
             </p>

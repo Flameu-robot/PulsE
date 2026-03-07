@@ -1,14 +1,12 @@
 import { useState } from 'react'
-import { useRouter } from 'next/navigation'
 import { RegisterFormData, AuthResponse } from './types'
-import {api} from "@/app/lib/api";
+import { api } from "@/app/lib/api"
 
 export const useRegister = () => {
     const [isLoading, setIsLoading] = useState(false)
     const [serverError, setServerError] = useState<string | null>(null)
-    const router = useRouter()
 
-    const registerUser = async (data: RegisterFormData) => {
+    const registerUser = async (data: RegisterFormData): Promise<boolean> => {
         setIsLoading(true)
         setServerError(null)
 
@@ -19,12 +17,15 @@ export const useRegister = () => {
                 password: data.password
             }) as AuthResponse
 
-            localStorage.setItem('accessToken', authData.accessToken)
-            localStorage.setItem('refreshToken', authData.refreshToken)
+            if (authData.accessToken && authData.refreshToken) {
+                localStorage.setItem('accessToken', authData.accessToken)
+                localStorage.setItem('refreshToken', authData.refreshToken)
+            }
 
-            router.push('/dashboard')
+            return true
         } catch (err: any) {
-            setServerError(err.message)
+            setServerError(err.response?.data?.message || err.message)
+            return false
         } finally {
             setIsLoading(false)
         }

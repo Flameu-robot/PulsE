@@ -8,13 +8,20 @@ import Button from '../../components/ui/Button'
 import { RegisterFormData } from './types'
 import { useRegister } from './useRegister'
 
-export default function RegisterForm() {
+interface RegisterFormProps {
+    onSuccess: () => void
+}
+
+export default function RegisterForm({ onSuccess }: RegisterFormProps) {
     const { register, handleSubmit, watch, formState: { errors } } = useForm<RegisterFormData>()
     const { registerUser, isLoading, serverError } = useRegister()
     const password = watch('password')
 
-    const onSubmit = (data: RegisterFormData) => {
-        registerUser(data)
+    const onSubmit = async (data: RegisterFormData) => {
+        const success = await registerUser(data)
+        if (success) {
+            onSuccess()
+        }
     }
 
     return (
