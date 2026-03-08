@@ -10,15 +10,20 @@ export const useLogout = () => {
             const refreshToken = localStorage.getItem('refreshToken')
             const response = await api.post('/api/auth/logout', { refreshToken })
 
-            if (response.status === 200) {
-                console.log('Successfully logged out from server')
+            const status = response?.status
+
+            if (status === 200 || status === 204) {
+                console.log('Server logout successful:', status)
             }
         } catch (error) {
-            console.error('Logout failed', error)
+            console.error('Logout request failed:', error)
         } finally {
             localStorage.removeItem('accessToken')
             localStorage.removeItem('refreshToken')
             Cookies.remove('accessToken')
+
+            console.log('Local storage and cookies cleared')
+
             router.push('/')
             router.refresh()
         }
