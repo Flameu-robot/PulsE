@@ -1,9 +1,11 @@
 package com.example.identityservice.security;
 
 
+import exception.auth.EmailNotVerifiedException;
 import exception.base.BaseException;
 import exception.base.ErrorResponse;
 import jakarta.servlet.http.HttpServletRequest;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
@@ -87,5 +89,20 @@ public class GlobalExceptionHandler {
                 request.getRequestURI()
         );
         return ResponseEntity.status(500).body(response);
+    }
+
+    @ExceptionHandler(EmailNotVerifiedException.class)
+    public ResponseEntity<ErrorResponse> handleEmailNotVerified(
+            EmailNotVerifiedException ex,
+            HttpServletRequest request
+    ) {
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(
+                new ErrorResponse(
+                        403,
+                        "EMAIL_NOT_VERIFIED",
+                        ex.getMessage(),
+                        request.getRequestURI()
+                )
+        );
     }
 }

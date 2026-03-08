@@ -12,10 +12,7 @@ import com.example.identityservice.entity.enums.UserRole;
 import com.example.identityservice.entity.enums.UserStatus;
 import com.example.identityservice.repository.TokenRepository;
 import com.example.identityservice.repository.UserRepository;
-import exception.auth.InvalidCredentialsException;
-import exception.auth.TokenException;
-import exception.auth.UserAlreadyExistsException;
-import exception.auth.UserNotFoundException;
+import exception.auth.*;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -175,6 +172,10 @@ public class AuthService {
     public void changePassword(String username, ChangePasswordRequest request) {
         User user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new UserNotFoundException(username));
+
+        if (user.getStatus() == UserStatus.PENDING) {
+            throw new EmailNotVerifiedException("Verify your email before changing password");
+        }
 
         if (!passwordEncoder.matches(request.currentPassword(), user.getPasswordHash())) {
             throw new InvalidCredentialsException();
