@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
+import { motion } from 'framer-motion'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import {
@@ -23,8 +23,10 @@ import {
 import { cn } from '@/app/lib/utils'
 import { UserProfileModal } from '../modal/userProfileModal/UserProfileModal'
 import { NotificationsModal } from '../modal/notificationsModal/NotificationsModal'
+import { NavItem as NavItemType } from './types'
+import { useLogout } from './useLogout'
 
-const PRIMARY_NAV = [
+const PRIMARY_NAV: NavItemType[] = [
     { id: 'feed', icon: LayoutDashboard, label: 'Feed', href: '/main' },
     { id: 'messages', icon: MessageSquare, label: 'Messages', href: '/main/mes' },
     { id: 'music', icon: Music, label: 'Music', href: '/main/music' },
@@ -105,7 +107,7 @@ const MusicOverlay = () => {
     )
 }
 
-const NavItem = ({ item, pathname }: { item: typeof PRIMARY_NAV[0], pathname: string | null }) => {
+const NavItem = ({ item, pathname }: { item: NavItemType, pathname: string | null }) => {
     const isActive = pathname === item.href || (item.href !== '/main' && pathname?.startsWith(item.href))
 
     return (
@@ -140,6 +142,7 @@ const NavItem = ({ item, pathname }: { item: typeof PRIMARY_NAV[0], pathname: st
 
 export default function Sidebar() {
     const pathname = usePathname()
+    const { logout } = useLogout()
     const [isProfileOpen, setIsProfileOpen] = useState(false)
     const [isNotifOpen, setIsNotifOpen] = useState(false)
 
@@ -200,7 +203,6 @@ export default function Sidebar() {
                             </div>
                             <div className="flex flex-col overflow-hidden text-left">
                                 <span className="text-sm font-bold text-white truncate">Alex Johnson</span>
-                                <span className="text-[10px] text-purple-500 font-medium uppercase tracking-widest">Pro Member</span>
                             </div>
                         </motion.button>
 
@@ -228,7 +230,12 @@ export default function Sidebar() {
                                 </motion.button>
                             </Link>
 
-                            <motion.button whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }} className="p-3 text-gray-500 hover:text-red-400 transition-colors">
+                            <motion.button
+                                whileHover={{ scale: 1.1 }}
+                                whileTap={{ scale: 0.9 }}
+                                onClick={logout}
+                                className="p-3 text-gray-500 hover:text-red-400 transition-colors"
+                            >
                                 <LogOut className="w-5 h-5" />
                             </motion.button>
                         </div>
