@@ -1,5 +1,6 @@
 package com.example.gatewayservice.filter;
 
+import com.example.gatewayservice.dto.RouteRule;
 import com.example.gatewayservice.security.JwtUtils;
 import io.jsonwebtoken.Claims;
 import lombok.RequiredArgsConstructor;
@@ -40,25 +41,25 @@ public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
             new AntPathMatcher();
 
     // Список путей, не требующих авторизации
-    private final List<String> openApiEndpoints = List.of(
+    private final List<RouteRule> openApiEndpoints = List.of(
             // Identity-service
-            "/api/auth/register",
-            "/api/auth/login",
-            "/api/auth/refresh",
-            "/api/auth/password/forgot",
-            "/api/auth/password/reset",
-            "/api/auth/webauthn/login",
+            new RouteRule("POST", "/api/auth/register"),
+            new RouteRule("POST", "/api/auth/login"),
+            new RouteRule("POST", "/api/auth/refresh"),
+            new RouteRule("POST", "/api/auth/password/forgot"),
+            new RouteRule("POST", "/api/auth/password/reset"),
+            new RouteRule("POST", "/api/auth/webauthn/login"),
+            new RouteRule("GET", "/api/users/{id:\\d+}"),
 
-            "/api/users/**",
-            "/api/auth/oauth2/**",
-            "/oauth2/**",
+            new RouteRule(null, "/api/auth/oauth2/**"),
+            new RouteRule(null, "/oauth2/**"),
 
             // Swagger
-            "/swagger-ui.html",
-            "/swagger-ui/**",
-            "/v3/api-docs/**",
-            "/v3/api-docs",
-            "/webjars/**"
+            new RouteRule(null, "/swagger-ui.html"),
+            new RouteRule(null, "/swagger-ui/**"),
+            new RouteRule(null, "/v3/api-docs/**"),
+            new RouteRule(null, "/v3/api-docs"),
+            new RouteRule(null, "/webjars/**")
     );
 
     @SuppressWarnings("NullableProblems")
@@ -67,6 +68,7 @@ public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
 
         ServerHttpRequest request = exchange.getRequest();
         String path = request.getPath().value();
+        String method = request.getMethod().name();
 
         // 1. Очистка входящих хедеров (безопасность)
         ServerHttpRequest.Builder requestBuilder = request.mutate()
@@ -82,7 +84,7 @@ public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
         requestBuilder.header(secretHeaderName, secretToken);
 
         // Пропуск открытых эндпоинтов
-        if (isOpenEndpoint(path)) {
+        if (isOpenEndpoint(path, method)) {
             // Маркер отсутствия аутентификации
             requestBuilder.header("X-Anonymous-Request", "true");
             return chain.filter(exchange.mutate().request(requestBuilder.build()).build());
@@ -117,9 +119,21 @@ public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
         return chain.filter(exchange.mutate().request(requestBuilder.build()).build());
     }
 
-    private boolean isOpenEndpoint(String path) {
+    private boolean isOpenEndpoint(String path, String method) {
+        if (isPublicUserProfile(path, method)) {
+            return true;
+        }
+
         return openApiEndpoints.stream()
-                .anyMatch(pattern -> pathMatcher.match(pattern, path));
+                .anyMatch(rule ->
+                        pathMatcher.match(rule.pattern(), path)
+                                && (rule.method() == null || rule.method().equalsIgnoreCase(method))
+                );
+    }
+
+    private boolean isPublicUserProfile(String path, String method) {
+        return "GET".equalsIgnoreCase(method)
+                && path.matches("^/api/users/\\d+$");
     }
 
     @SuppressWarnings("NullableProblems")
