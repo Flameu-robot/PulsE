@@ -12,10 +12,7 @@ import com.example.identityservice.entity.enums.UserRole;
 import com.example.identityservice.entity.enums.UserStatus;
 import com.example.identityservice.repository.TokenRepository;
 import com.example.identityservice.repository.UserRepository;
-import exception.auth.InvalidCredentialsException;
-import exception.auth.TokenException;
-import exception.auth.UserAlreadyExistsException;
-import exception.auth.UserNotFoundException;
+import exception.auth.*;
 import jakarta.servlet.http.HttpServletRequest;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -440,6 +437,7 @@ class AuthServiceTest {
             User oauthUser = User.builder()
                     .id(2L)
                     .username("oauthuser")
+                    .status(UserStatus.ACTIVE)
                     .passwordHash(null)
                     .build();
 
@@ -447,6 +445,23 @@ class AuthServiceTest {
 
             assertThatThrownBy(() -> authService.changePassword("oauthuser", validRequest))
                     .isInstanceOf(InvalidCredentialsException.class);
+        }
+
+        @Test
+        @DisplayName("should throw when user status is PENDING")
+        void shouldThrowWhenUserStatusIsPending() {
+            User pendingUser = User.builder()
+                    .id(3L)
+                    .username("pendinguser")
+                    .status(UserStatus.PENDING)
+                    .passwordHash("$2a$10$hashedpassword")
+                    .build();
+
+            when(userRepository.findByUsername("pendinguser")).thenReturn(Optional.of(pendingUser));
+
+            assertThatThrownBy(() -> authService.changePassword("pendinguser", validRequest))
+                    .isInstanceOf(EmailNotVerifiedException.class)
+                    .hasMessageContaining("Verify your email");
         }
 
         @Test
