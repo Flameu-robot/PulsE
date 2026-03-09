@@ -48,7 +48,7 @@ public class GatewayHeaderAuthFilter extends OncePerRequestFilter {
             log.warn("Unauthorized internal access attempt to: {}", request.getRequestURI());
             sendErrorResponse(response, HttpServletResponse.SC_FORBIDDEN,
                     "Direct access denied");
-            return;  // НЕ вызываем filterChain.doFilter
+            return;
         }
 
         if (username != null && userId != null && userRole != null) {
