@@ -7,7 +7,6 @@ import jakarta.servlet.http.HttpServletResponse;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.NonNull;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.core.annotation.Order;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
@@ -15,6 +14,8 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
 
 @Component
 @Slf4j
@@ -43,10 +44,11 @@ public class GatewayHeaderAuthFilter extends OncePerRequestFilter {
         String username = request.getHeader("X-User-Sub");
         String requestSecret = request.getHeader(secretHeaderName);
 
-        if (requestSecret == null || !requestSecret.equals(secretToken)) {
-            log.warn("Unauthorized internal access attempt detected!");
-            filterChain.doFilter(request, response);
-            return;
+        if (requestSecret == null || !constantTimeEquals(requestSecret, secretToken)) {
+            log.warn("Unauthorized internal access attempt to: {}", request.getRequestURI());
+            sendErrorResponse(response, HttpServletResponse.SC_FORBIDDEN,
+                    "Direct access denied");
+            return;  // НЕ вызываем filterChain.doFilter
         }
 
         if (username != null && userId != null && userRole != null) {
@@ -73,14 +75,13 @@ public class GatewayHeaderAuthFilter extends OncePerRequestFilter {
 
             } catch (NumberFormatException e) {
                 log.error("MALFORMED HEADER: X-User-Id must be Long. Value received: {}", userId);
-                response.sendError(HttpServletResponse.SC_BAD_REQUEST, "Invalid User ID format");
+                sendErrorResponse(response, HttpServletResponse.SC_BAD_REQUEST, "Invalid User ID format");
                 return;
             } catch (Exception e) {
                 log.error("Unexpected error during internal authentication for path {}: {}",
                         request.getRequestURI(), e.getMessage(), e);
-                response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
-                response.setContentType("application/json");
-                response.getWriter().write("{\"error\": \"Internal Auth Processing Error\"}");
+                sendErrorResponse(response, HttpServletResponse.SC_INTERNAL_SERVER_ERROR,
+                        "Internal Auth Processing Error");
                 return;
             }
         } else {
@@ -88,5 +89,20 @@ public class GatewayHeaderAuthFilter extends OncePerRequestFilter {
         }
 
         filterChain.doFilter(request, response);
+    }
+
+    // Защита против Timing Attack
+    private boolean constantTimeEquals(String requestSecret, String secretToken) {
+        return MessageDigest.isEqual(
+                requestSecret.getBytes(StandardCharsets.UTF_8),
+                secretToken.getBytes(StandardCharsets.UTF_8));
+    }
+
+    private void sendErrorResponse(HttpServletResponse response,
+                                   int status, String message) throws IOException {
+        response.setStatus(status);
+        response.setContentType("application/json");
+        response.setCharacterEncoding("UTF-8");
+        response.getWriter().write("{\"error\": \"" + message + "\"}");
     }
 }

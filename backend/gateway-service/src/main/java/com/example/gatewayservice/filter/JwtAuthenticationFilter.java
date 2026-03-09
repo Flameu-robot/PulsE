@@ -8,8 +8,10 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cloud.gateway.filter.GatewayFilterChain;
 import org.springframework.cloud.gateway.filter.GlobalFilter;
 import org.springframework.core.Ordered;
+import org.springframework.core.io.buffer.DataBuffer;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.server.reactive.ServerHttpRequest;
 import org.springframework.http.server.reactive.ServerHttpResponse;
 import org.jspecify.annotations.NonNull;
@@ -18,6 +20,7 @@ import org.springframework.util.AntPathMatcher;
 import org.springframework.web.server.ServerWebExchange;
 import reactor.core.publisher.Mono;
 
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 
 @Component
@@ -45,10 +48,10 @@ public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
             "/api/auth/password/forgot",
             "/api/auth/password/reset",
             "/api/auth/webauthn/login",
-            "/api/users/",
 
-            "/api/auth/oauth2/",
-            "/oauth2/",
+            "/api/users/**",
+            "/api/auth/oauth2/**",
+            "/oauth2/**",
 
             // Swagger
             "/swagger-ui.html",
@@ -65,53 +68,53 @@ public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
         ServerHttpRequest request = exchange.getRequest();
         String path = request.getPath().value();
 
-        // Очистка заголовков
-        ServerHttpRequest sanitizedRequest = request.mutate()
+        // 1. Очистка входящих хедеров (безопасность)
+        ServerHttpRequest.Builder requestBuilder = request.mutate()
                 .headers(h -> {
                     h.remove("X-User-Id");
                     h.remove("X-User-Role");
                     h.remove("X-User-Sub");
+                    h.remove("X-Anonymous-Request");
+                    h.remove(HttpHeaders.AUTHORIZATION);
                     h.remove(secretHeaderName);
-                })
-                .build();
-        exchange = exchange.mutate().request(sanitizedRequest).build();
+                });
+
+        requestBuilder.header(secretHeaderName, secretToken);
 
         // Пропуск открытых эндпоинтов
         if (isOpenEndpoint(path)) {
-            return chain.filter(exchange);
+            // Маркер отсутствия аутентификации
+            requestBuilder.header("X-Anonymous-Request", "true");
+            return chain.filter(exchange.mutate().request(requestBuilder.build()).build());
         }
 
-        // Получение заголовка
+        // Извлечение хедеров из запроса
         String authHeader = request.getHeaders().getFirst(HttpHeaders.AUTHORIZATION);
 
-        if (authHeader == null || authHeader.isEmpty()) {
-            return onError(exchange, "Authorization header is missing");
+        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+            return onError(exchange, "Missing or invalid Authorization header");
         }
 
-        // Формат Bearer
-        if (!authHeader.startsWith("Bearer ")) {
-            return onError(exchange, "Invalid Authorization header format");
-        }
-
-        // Удаление Bearer
         String token = authHeader.substring(7);
-
-        // Валидация токена
         if (!jwtUtils.validateToken(token)) {
             return onError(exchange, "Invalid JWT Token");
         }
 
-        // Парсинг клеймов в хедеры
+        // Подстановка в хедеры
         Claims claims = jwtUtils.getAllClaimsFromToken(token);
+        Object userId = claims.get("userId");
+        Object role = claims.get("role");
+        String subject = claims.getSubject();
 
-        ServerHttpRequest modifiedRequest = exchange.getRequest().mutate()
-                .header("X-User-Id", String.valueOf(claims.get("userId")))
-                .header("X-User-Role", String.valueOf(claims.get("role")))
-                .header("X-User-Sub", claims.getSubject())
-                .header(secretHeaderName, secretToken)
-                .build();
+        if (userId == null || role == null || subject == null) {
+            return onError(exchange, "JWT is missing required claims");
+        }
 
-        return chain.filter(exchange.mutate().request(modifiedRequest).build());
+        requestBuilder.header("X-User-Id", String.valueOf(userId));
+        requestBuilder.header("X-User-Role", String.valueOf(role));
+        requestBuilder.header("X-User-Sub", subject);
+
+        return chain.filter(exchange.mutate().request(requestBuilder.build()).build());
     }
 
     private boolean isOpenEndpoint(String path) {
@@ -123,8 +126,13 @@ public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
     private Mono<Void> onError(ServerWebExchange exchange, String err) {
         ServerHttpResponse response = exchange.getResponse();
         response.setStatusCode(HttpStatus.UNAUTHORIZED);
+        response.getHeaders().setContentType(MediaType.APPLICATION_JSON);
         log.error("Security Error: {}", err);
-        return response.setComplete();
+
+        String body = "{\"error\": \"" + err + "\"}";
+        DataBuffer buffer = response.bufferFactory()
+                .wrap(body.getBytes(StandardCharsets.UTF_8));
+        return response.writeWith(Mono.just(buffer));
     }
 
     @Override
