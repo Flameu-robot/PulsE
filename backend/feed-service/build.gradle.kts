@@ -19,6 +19,7 @@ dependencies {
 	implementation(libs.bundles.spring.security)
 	implementation(libs.bundles.database)
 	implementation(libs.bundles.kafka)
+	implementation(libs.bundles.jwt)
 
 	implementation(libs.spring.boot.starter.data.jpa)
 	implementation(libs.spring.boot.starter.data.redis)
