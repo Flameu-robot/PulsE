@@ -4,6 +4,7 @@ import com.example.gatewayservice.security.JwtUtils;
 import io.jsonwebtoken.Claims;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cloud.gateway.filter.GatewayFilterChain;
 import org.springframework.cloud.gateway.filter.GlobalFilter;
 import org.springframework.core.Ordered;
@@ -23,6 +24,12 @@ import java.util.List;
 @Slf4j
 @RequiredArgsConstructor
 public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
+
+    @Value("${internal.security.header-name:X-Internal-Secret}")
+    private String secretHeaderName;
+
+    @Value("${internal.security.token}")
+    private String secretToken;
 
     private final JwtUtils jwtUtils;
 
@@ -64,6 +71,7 @@ public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
                     h.remove("X-User-Id");
                     h.remove("X-User-Role");
                     h.remove("X-User-Sub");
+                    h.remove(secretHeaderName);
                 })
                 .build();
         exchange = exchange.mutate().request(sanitizedRequest).build();
@@ -100,6 +108,7 @@ public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
                 .header("X-User-Id", String.valueOf(claims.get("userId")))
                 .header("X-User-Role", String.valueOf(claims.get("role")))
                 .header("X-User-Sub", claims.getSubject())
+                .header(secretHeaderName, secretToken)
                 .build();
 
         return chain.filter(exchange.mutate().request(modifiedRequest).build());

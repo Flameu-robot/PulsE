@@ -71,6 +71,10 @@ server:
   port: 8081
   shutdown: graceful
 
+internal:
+  security:
+    header-name: "${INTERNAL_HEADER:X-PulsE-Internal-Token}"
+
 jwt:
   secret: ${JWT_SECRET:dev-super-secret-key-that-is-at-least-256-bits-long-for-hmac-sha256-algorithm}
   issuer: ${JWT_ISSUER:pulse-identity}
