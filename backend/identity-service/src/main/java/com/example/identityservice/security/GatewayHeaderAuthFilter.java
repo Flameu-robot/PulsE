@@ -17,7 +17,6 @@ import org.springframework.web.filter.OncePerRequestFilter;
 import java.io.IOException;
 
 @Component
-@Order(1)
 @Slf4j
 public class GatewayHeaderAuthFilter extends OncePerRequestFilter {
 
@@ -52,6 +51,8 @@ public class GatewayHeaderAuthFilter extends OncePerRequestFilter {
 
         if (username != null && userId != null && userRole != null) {
             try {
+                log.debug("Attempting internal auth for user: {}, id: {}", username, userId);
+
                 GatewayPrincipal principal = new GatewayPrincipal(
                         Long.parseLong(userId),
                         username,
@@ -68,8 +69,22 @@ public class GatewayHeaderAuthFilter extends OncePerRequestFilter {
                 authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
                 SecurityContextHolder.getContext().setAuthentication(authToken);
 
+                log.info("Successfully authenticated internal request for user: {}", username);
+
             } catch (NumberFormatException e) {
+                log.error("MALFORMED HEADER: X-User-Id must be Long. Value received: {}", userId);
+                response.sendError(HttpServletResponse.SC_BAD_REQUEST, "Invalid User ID format");
+                return;
+            } catch (Exception e) {
+                log.error("Unexpected error during internal authentication for path {}: {}",
+                        request.getRequestURI(), e.getMessage(), e);
+                response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+                response.setContentType("application/json");
+                response.getWriter().write("{\"error\": \"Internal Auth Processing Error\"}");
+                return;
             }
+        } else {
+            log.trace("Missing user headers (Id/Role/Sub) for internal request to: {}", request.getRequestURI());
         }
 
         filterChain.doFilter(request, response);
