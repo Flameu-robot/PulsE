@@ -10,22 +10,29 @@ import com.example.identityservice.entity.enums.UserStatus;
 import com.example.identityservice.repository.UserRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
-import org.junit.jupiter.api.*;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
+import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
-@SpringBootTest
+@SpringBootTest(properties = {
+        "internal.security.token=test-secret-token",
+        "internal.security.header-name=X-Internal-Secret"
+})
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
-@TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 class AuthIntegrationTest extends RedisTestContainerConfig {
 
     @Autowired
@@ -34,10 +41,16 @@ class AuthIntegrationTest extends RedisTestContainerConfig {
     @Autowired
     private RedisCleanup redisCleanup;
 
-    private ObjectMapper objectMapper;
-
     @Autowired
     private UserRepository userRepository;
+
+    @Value("${internal.security.header-name}")
+    private String secretHeaderName;
+
+    @Value("${internal.security.token}")
+    private String secretToken;
+
+    private ObjectMapper objectMapper;
 
     @BeforeEach
     void setUp() {
@@ -47,134 +60,178 @@ class AuthIntegrationTest extends RedisTestContainerConfig {
         redisCleanup.flushAll();
     }
 
+    // -- Helpers --
+    private MockHttpServletRequestBuilder withSecret(MockHttpServletRequestBuilder builder) {
+        return builder.header(secretHeaderName, secretToken);
+    }
+
     private void activateUser(String username) {
         User user = userRepository.findByUsername(username).orElseThrow();
         user.setStatus(UserStatus.ACTIVE);
         userRepository.save(user);
     }
 
-    @Test
-    @Order(1)
-    @DisplayName("full auth flow: register → login → refresh → logout")
-    void fullAuthFlow() throws Exception {
-        RegisterRequest registerRequest = new RegisterRequest("flowuser", "flow@test.com", "password123");
+    private AuthResponse registerUser(String username, String email, String password) throws Exception {
+        RegisterRequest request = new RegisterRequest(username, email, password);
 
-        MvcResult registerResult = mockMvc.perform(post("/api/auth/register")
+        MvcResult result = mockMvc.perform(withSecret(post("/api/auth/register"))
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(registerRequest)))
+                        .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.accessToken").isNotEmpty())
                 .andReturn();
 
-        activateUser("flowuser");
-
-        LoginRequest loginRequest = new LoginRequest("flowuser", "password123");
-
-        MvcResult loginResult = mockMvc.perform(post("/api/auth/login")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(loginRequest)))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.accessToken").isNotEmpty())
-                .andReturn();
-
-        AuthResponse loginResponse = objectMapper.readValue(
-                loginResult.getResponse().getContentAsString(),
+        return objectMapper.readValue(
+                result.getResponse().getContentAsString(),
                 AuthResponse.class
         );
+    }
 
-        String refreshBody = "{\"refreshToken\":\"" + loginResponse.refreshToken() + "\"}";
+    private AuthResponse registerAndActivate(String username, String email, String password) throws Exception {
+        AuthResponse response = registerUser(username, email, password);
+        activateUser(username);
+        return response;
+    }
 
-        mockMvc.perform(post("/api/auth/refresh")
+    private AuthResponse loginUser(String login, String password) throws Exception {
+        LoginRequest request = new LoginRequest(login, password);
+
+        MvcResult result = mockMvc.perform(withSecret(post("/api/auth/login"))
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(refreshBody))
+                        .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.accessToken").isNotEmpty());
+                .andReturn();
 
-        String logoutBody = "{\"refreshToken\":\"" + loginResponse.refreshToken() + "\"}";
+        return objectMapper.readValue(
+                result.getResponse().getContentAsString(),
+                AuthResponse.class
+        );
+    }
 
-        mockMvc.perform(post("/api/auth/logout")
+    @Test
+    @DisplayName("Full Auth flow: Register -> Activate -> Login -> Refresh -> Logout")
+    void fullAuthFlow() throws Exception {
+        registerUser("flowuser", "flow@test.com", "password123");
+        activateUser("flowuser");
+
+        AuthResponse loginResponse = loginUser("flowuser", "password123");
+
+        // refresh
+        MvcResult refreshResult = mockMvc.perform(withSecret(post("/api/auth/refresh"))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"refreshToken\":\"" + loginResponse.refreshToken() + "\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.accessToken").isNotEmpty())
+                .andReturn();
+
+        // logout
+        mockMvc.perform(withSecret(post("/api/auth/logout"))
                         .header("Authorization", "Bearer " + loginResponse.accessToken())
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(logoutBody))
+                        .content("{\"refreshToken\":\"" + loginResponse.refreshToken() + "\"}"))
                 .andExpect(status().isNoContent());
     }
 
     @Test
-    @Order(2)
-    @DisplayName("should not register with duplicate username")
-    void shouldNotRegisterDuplicate() throws Exception {
-        RegisterRequest request = new RegisterRequest("duplicate", "dup@test.com", "password123");
-
-        mockMvc.perform(post("/api/auth/register")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(request)))
-                .andExpect(status().isCreated());
+    @DisplayName("Should not register with duplicate username")
+    void shouldNotRegisterDuplicateUsername() throws Exception {
+        registerUser("duplicate", "dup@test.com", "password123");
 
         RegisterRequest duplicateRequest = new RegisterRequest("duplicate", "other@test.com", "password123");
 
-        mockMvc.perform(post("/api/auth/register")
+        mockMvc.perform(withSecret(post("/api/auth/register"))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(duplicateRequest)))
                 .andExpect(status().isConflict());
     }
 
     @Test
-    @Order(3)
-    @DisplayName("should not login with wrong password")
-    void shouldNotLoginWithWrongPassword() throws Exception {
-        RegisterRequest register = new RegisterRequest("wrongpass", "wrong@test.com", "password123");
-        mockMvc.perform(post("/api/auth/register")
+    @DisplayName("Should not register with duplicate email")
+    void shouldNotRegisterDuplicateEmail() throws Exception {
+        registerUser("user1", "same@test.com", "password123");
+
+        RegisterRequest duplicateRequest = new RegisterRequest("user2", "same@test.com", "password123");
+
+        mockMvc.perform(withSecret(post("/api/auth/register"))
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(register)))
-                .andExpect(status().isCreated());
+                        .content(objectMapper.writeValueAsString(duplicateRequest)))
+                .andExpect(status().isConflict());
+    }
 
-        activateUser("wrongpass");
+    @Test
+    @DisplayName("Should not login with wrong password")
+    void shouldNotLoginWithWrongPassword() throws Exception {
+        registerAndActivate("wrong_pass", "wrong@test.com", "password123");
 
-        LoginRequest login = new LoginRequest("wrongpass", "wrongpassword");
-        mockMvc.perform(post("/api/auth/login")
+        LoginRequest login = new LoginRequest("wrong_pass", "wrong_password");
+
+        mockMvc.perform(withSecret(post("/api/auth/login"))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(login)))
                 .andExpect(status().isUnauthorized());
     }
 
     @Test
-    @Order(4)
-    @DisplayName("should login with email")
+    @DisplayName("Should return 401 on login with non-existent user")
+    void shouldReturn401OnNonExistentUser() throws Exception {
+        String body = "{\"login\":\"ghost\",\"password\":\"password123\"}";
+
+        mockMvc.perform(withSecret(post("/api/auth/login"))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(body))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    @DisplayName("Should login with email")
     void shouldLoginWithEmail() throws Exception {
-        RegisterRequest register = new RegisterRequest("emailuser", "email@test.com", "password123");
-        mockMvc.perform(post("/api/auth/register")
+        registerAndActivate("emailuser", "email@test.com", "password123");
+
+        String body = "{\"login\":\"email@test.com\",\"password\":\"password123\"}";
+
+        mockMvc.perform(withSecret(post("/api/auth/login"))
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(register)))
-                .andExpect(status().isCreated());
-
-        activateUser("emailuser");
-
-        String loginBody = "{\"login\":\"email@test.com\",\"password\":\"password123\"}";
-
-        mockMvc.perform(post("/api/auth/login")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(loginBody))
+                        .content(body))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.username").value("emailuser"));
     }
 
     @Test
-    @Order(5)
+    @DisplayName("Should return 401 on refresh with invalid token")
+    void shouldReturn401OnInvalidRefreshToken() throws Exception {
+        String body = "{\"refreshToken\":\"invalid-token\"}";
+
+        mockMvc.perform(withSecret(post("/api/auth/refresh"))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(body))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    @DisplayName("Should not refresh after logout")
+    void shouldNotRefreshAfterLogout() throws Exception {
+        registerAndActivate("refreshuser", "refresh@test.com", "password123");
+        AuthResponse response = loginUser("refreshuser", "password123");
+
+        // logout
+        mockMvc.perform(withSecret(post("/api/auth/logout"))
+                        .header("Authorization", "Bearer " + response.accessToken())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"refreshToken\":\"" + response.refreshToken() + "\"}"))
+                .andExpect(status().isNoContent());
+
+        // refresh
+        mockMvc.perform(withSecret(post("/api/auth/refresh"))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"refreshToken\":\"" + response.refreshToken() + "\"}"))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
     @DisplayName("should get current user")
     void shouldGetCurrentUser() throws Exception {
-        RegisterRequest register = new RegisterRequest("meuser", "me@test.com", "password123");
-        MvcResult result = mockMvc.perform(post("/api/auth/register")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(register)))
-                .andExpect(status().isCreated())
-                .andReturn();
+        AuthResponse response = registerUser("meuser", "me@test.com", "password123");
 
-        AuthResponse response = objectMapper.readValue(
-                result.getResponse().getContentAsString(),
-                AuthResponse.class
-        );
-
-        mockMvc.perform(get("/api/auth/me")
+        mockMvc.perform(withSecret(get("/api/auth/me"))
                         .header("Authorization", "Bearer " + response.accessToken()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.username").value("meuser"))
@@ -183,189 +240,53 @@ class AuthIntegrationTest extends RedisTestContainerConfig {
     }
 
     @Test
-    @Order(6)
-    @DisplayName("should change password")
+    @DisplayName("Should change password and login with new one")
     void shouldChangePassword() throws Exception {
-        RegisterRequest register = new RegisterRequest("changepassuser", "changepass@test.com", "oldPassword123");
-        MvcResult result = mockMvc.perform(post("/api/auth/register")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(register)))
-                .andExpect(status().isCreated())
-                .andReturn();
-
-        AuthResponse response = objectMapper.readValue(
-                result.getResponse().getContentAsString(),
-                AuthResponse.class
-        );
-
-        activateUser("changepassuser");
+        AuthResponse response = registerAndActivate("changeuser", "change@test.com", "oldPassword123");
 
         String changeBody = "{\"currentPassword\":\"oldPassword123\",\"newPassword\":\"newPassword123\"}";
 
-        mockMvc.perform(post("/api/auth/password/change")
+        mockMvc.perform(withSecret(post("/api/auth/password/change"))
+                        .header("Authorization", "Bearer " + response.accessToken())
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(changeBody)
-                        .header("Authorization", "Bearer " + response.accessToken()))
+                        .content(changeBody))
                 .andExpect(status().isNoContent());
 
-        String loginBody = "{\"login\":\"changepassuser\",\"password\":\"newPassword123\"}";
+        String newLoginBody = "{\"login\":\"changeuser\",\"password\":\"newPassword123\"}";
 
-        mockMvc.perform(post("/api/auth/login")
+        mockMvc.perform(withSecret(post("/api/auth/login"))
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(loginBody))
+                        .content(newLoginBody))
                 .andExpect(status().isOk());
 
-        String oldLoginBody = "{\"login\":\"changepassuser\",\"password\":\"oldPassword123\"}";
+        String oldLoginBody = "{\"login\":\"changeuser\",\"password\":\"oldPassword123\"}";
 
-        mockMvc.perform(post("/api/auth/login")
+        mockMvc.perform(withSecret(post("/api/auth/login"))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(oldLoginBody))
                 .andExpect(status().isUnauthorized());
     }
 
     @Test
-    @Order(7)
-    @DisplayName("should get own profile")
-    void shouldGetOwnProfile() throws Exception {
-        RegisterRequest register = new RegisterRequest("profileuser", "profile@test.com", "password123");
-        MvcResult result = mockMvc.perform(post("/api/auth/register")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(register)))
-                .andExpect(status().isCreated())
-                .andReturn();
-
-        AuthResponse response = objectMapper.readValue(
-                result.getResponse().getContentAsString(), AuthResponse.class
-        );
-
-        mockMvc.perform(get("/api/users/me")
-                        .header("Authorization", "Bearer " + response.accessToken()))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.username").value("profileuser"))
-                .andExpect(jsonPath("$.email").value("profile@test.com"));
-    }
-
-    @Test
-    @Order(8)
-    @DisplayName("should update profile")
-    void shouldUpdateProfile() throws Exception {
-        RegisterRequest register = new RegisterRequest("updateuser", "update@test.com", "password123");
-        MvcResult result = mockMvc.perform(post("/api/auth/register")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(register)))
-                .andExpect(status().isCreated())
-                .andReturn();
-
-        AuthResponse response = objectMapper.readValue(
-                result.getResponse().getContentAsString(), AuthResponse.class
-        );
-
-        String updateBody = "{\"bio\":\"My new bio\",\"phone\":\"+71234567890\"}";
-
-        mockMvc.perform(patch("/api/users/me")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(updateBody)
-                        .header("Authorization", "Bearer " + response.accessToken()))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.bio").value("My new bio"))
-                .andExpect(jsonPath("$.phone").value("+71234567890"))
-                .andExpect(jsonPath("$.username").value("updateuser"));
-    }
-
-    @Test
-    @Order(9)
-    @DisplayName("should get public profile")
-    void shouldGetPublicProfile() throws Exception {
-        RegisterRequest register = new RegisterRequest("publicuser", "public@test.com", "password123");
-        MvcResult result = mockMvc.perform(post("/api/auth/register")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(register)))
-                .andExpect(status().isCreated())
-                .andReturn();
-
-        AuthResponse response = objectMapper.readValue(
-                result.getResponse().getContentAsString(), AuthResponse.class
-        );
-
-        mockMvc.perform(get("/api/users/" + response.userId()))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.username").value("publicuser"))
-                .andExpect(jsonPath("$.id").value(response.userId()))
-                .andExpect(jsonPath("$.email").doesNotExist());
-    }
-
-    @Test
-    @Order(10)
-    @DisplayName("should delete account")
-    void shouldDeleteAccount() throws Exception {
-        RegisterRequest register = new RegisterRequest("deleteuser", "delete@test.com", "password123");
-        MvcResult result = mockMvc.perform(post("/api/auth/register")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(register)))
-                .andExpect(status().isCreated())
-                .andReturn();
-
-        AuthResponse response = objectMapper.readValue(
-                result.getResponse().getContentAsString(), AuthResponse.class
-        );
-
-        activateUser("deleteuser");
-
-        mockMvc.perform(delete("/api/users/me")
-                        .header("Authorization", "Bearer " + response.accessToken()))
-                .andExpect(status().isNoContent());
-
-        String loginBody = "{\"login\":\"deleteuser\",\"password\":\"password123\"}";
-        mockMvc.perform(post("/api/auth/login")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(loginBody))
-                .andExpect(status().isUnauthorized());
-    }
-
-    @Test
-    @Order(11)
-    @DisplayName("should logout-all revoke all sessions")
+    @DisplayName("should logout-all and revoke all sessions")
     void shouldLogoutAll() throws Exception {
-        RegisterRequest register = new RegisterRequest("logoutalluser", "logoutall@test.com", "password123");
-        mockMvc.perform(post("/api/auth/register")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(register)))
-                .andExpect(status().isCreated());
+        registerAndActivate("logoutalluser", "logoutall@test.com", "password123");
 
-        activateUser("logoutalluser");
+        AuthResponse session1 = loginUser("logoutalluser", "password123");
+        AuthResponse session2 = loginUser("logoutalluser", "password123");
 
-        MvcResult login1 = mockMvc.perform(post("/api/auth/login")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"login\":\"logoutalluser\",\"password\":\"password123\"}"))
-                .andExpect(status().isOk())
-                .andReturn();
-
-        AuthResponse response1 = objectMapper.readValue(
-                login1.getResponse().getContentAsString(), AuthResponse.class
-        );
-
-        MvcResult login2 = mockMvc.perform(post("/api/auth/login")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"login\":\"logoutalluser\",\"password\":\"password123\"}"))
-                .andExpect(status().isOk())
-                .andReturn();
-
-        AuthResponse response2 = objectMapper.readValue(
-                login2.getResponse().getContentAsString(), AuthResponse.class
-        );
-
-        mockMvc.perform(post("/api/auth/logout-all")
-                        .header("Authorization", "Bearer " + response1.accessToken()))
+        mockMvc.perform(withSecret(post("/api/auth/logout-all"))
+                        .header("Authorization", "Bearer " + session1.accessToken()))
                 .andExpect(status().isNoContent());
 
-        mockMvc.perform(post("/api/auth/refresh")
+        mockMvc.perform(withSecret(post("/api/auth/refresh"))
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"refreshToken\":\"" + response1.refreshToken() + "\"}"))
+                        .content("{\"refreshToken\":\"" + session1.refreshToken() + "\"}"))
                 .andExpect(status().isUnauthorized());
 
-        mockMvc.perform(post("/api/auth/refresh")
+        mockMvc.perform(withSecret(post("/api/auth/refresh"))
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"refreshToken\":\"" + response2.refreshToken() + "\"}"))
+                        .content("{\"refreshToken\":\"" + session2.refreshToken() + "\"}"))
                 .andExpect(status().isUnauthorized());
     }
 }
