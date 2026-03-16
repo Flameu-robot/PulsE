@@ -1,6 +1,5 @@
 package com.example.feedservice.controller;
 
-import com.example.feedservice.config.PostgresTestContainerConfig;
 import com.example.feedservice.dto.response.FollowResponse;
 import com.example.feedservice.dto.response.PagedResponse;
 import com.example.feedservice.entity.enums.FollowStatus;
@@ -28,7 +27,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @SpringBootTest
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
-class FollowControllerTest extends PostgresTestContainerConfig {
+class FollowControllerTest {
 
     @Autowired
     private MockMvc mockMvc;

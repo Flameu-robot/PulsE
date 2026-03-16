@@ -1,7 +1,6 @@
 package com.example.feedservice.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.example.feedservice.config.PostgresTestContainerConfig;
 import com.example.feedservice.dto.request.CreateCommentRequest;
 import com.example.feedservice.dto.response.CommentResponse;
 import com.example.feedservice.dto.response.PagedResponse;
@@ -31,7 +30,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @SpringBootTest
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
-class CommentControllerTest extends PostgresTestContainerConfig {
+class CommentControllerTest {
 
     @Autowired
     private MockMvc mockMvc;

@@ -1,7 +1,6 @@
 package com.example.feedservice.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.example.feedservice.config.PostgresTestContainerConfig;
 import com.example.feedservice.dto.request.CreatePostRequest;
 import com.example.feedservice.dto.request.UpdatePostRequest;
 import com.example.feedservice.dto.response.*;
@@ -33,7 +32,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @SpringBootTest
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
-class PostControllerTest extends PostgresTestContainerConfig {
+class PostControllerTest {
 
     @Autowired
     private MockMvc mockMvc;

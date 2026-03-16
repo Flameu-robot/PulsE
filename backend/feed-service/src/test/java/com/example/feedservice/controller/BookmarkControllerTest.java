@@ -1,6 +1,5 @@
 package com.example.feedservice.controller;
 
-import com.example.feedservice.config.PostgresTestContainerConfig;
 import com.example.feedservice.dto.response.BookmarkResponse;
 import com.example.feedservice.dto.response.PagedResponse;
 import com.example.feedservice.dto.response.PostResponse;
@@ -30,7 +29,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @SpringBootTest
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
-class BookmarkControllerTest extends PostgresTestContainerConfig {
+class BookmarkControllerTest {
 
     @Autowired
     private MockMvc mockMvc;

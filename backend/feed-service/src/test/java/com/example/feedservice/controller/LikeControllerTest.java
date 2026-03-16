@@ -1,6 +1,5 @@
 package com.example.feedservice.controller;
 
-import com.example.feedservice.config.PostgresTestContainerConfig;
 import com.example.feedservice.service.LikeService;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -20,7 +19,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @SpringBootTest
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
-class LikeControllerTest extends PostgresTestContainerConfig {
+class LikeControllerTest {
 
     @Autowired
     private MockMvc mockMvc;

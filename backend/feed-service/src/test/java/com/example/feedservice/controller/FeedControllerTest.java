@@ -1,6 +1,5 @@
 package com.example.feedservice.controller;
 
-import com.example.feedservice.config.PostgresTestContainerConfig;
 import com.example.feedservice.dto.response.*;
 import com.example.feedservice.entity.enums.PostVisibility;
 import com.example.feedservice.service.FeedService;
@@ -27,7 +26,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @SpringBootTest
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
-class FeedControllerTest extends PostgresTestContainerConfig {
+class FeedControllerTest {
 
     @Autowired
     private MockMvc mockMvc;
