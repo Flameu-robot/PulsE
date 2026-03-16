@@ -43,6 +43,10 @@ public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
             "/api/auth/oauth2/",
             "/oauth2/",
 
+            // Feed-service
+            "/api/posts/*/comments",
+            "/api/comments/*/replies",
+
             // Swagger
             "/swagger-ui.html",
             "/swagger-ui/**",

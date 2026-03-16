@@ -60,10 +60,6 @@ server:
   port: 8082
   shutdown: graceful
 
-jwt:
-  secret: ${JWT_SECRET:dev-super-secret-key-that-is-at-least-256-bits-long-for-hmac-sha256-algorithm}
-  issuer: ${JWT_ISSUER:pulse-identity}
-
 app:
   gateway:
     url: ${GATEWAY_URL:http://localhost:8000}

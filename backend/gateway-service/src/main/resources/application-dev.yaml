@@ -9,6 +9,14 @@ spring:
             - DedupeResponseHeader=Access-Control-Allow-Credentials Access-Control-Allow-Origin
 
           routes:
+            # Feed service social (обход конфликта /api/users с identity service)
+            - id: feed-service-social
+              uri: ${FEED_SERVICE_URL:http://localhost:8082}
+              predicates:
+                - Path=/api/users/*/posts,/api/users/*/follow,/api/users/*/follow/**,/api/users/*/followers,/api/users/*/following
+              filters:
+                - StripPrefix=0
+
             # Identity service
             - id: identity-service
               uri: ${IDENTITY_SERVICE_URL:http://localhost:8081}
@@ -17,12 +25,28 @@ spring:
               filters:
                 - StripPrefix=0
 
+            # Feed service
+            - id: feed-service
+              uri: ${FEED_SERVICE_URL:http://localhost:8082}
+              predicates:
+                - Path=/api/posts/**,/api/feed/**,/api/bookmarks/**,/api/comments/**
+              filters:
+                - StripPrefix=0
+
+            # Docs
             - id: identity-service-docs
               uri: ${IDENTITY_SERVICE_URL:http://localhost:8081}
               predicates:
                 - Path=/v3/api-docs/identity-service
               filters:
                 - RewritePath=/v3/api-docs/identity-service, /v3/api-docs
+
+            - id: feed-service-docs
+              uri: ${FEED_SERVICE_URL:http://localhost:8082}
+              predicates:
+                - Path=/v3/api-docs/feed-service
+              filters:
+                - RewritePath=/v3/api-docs/feed-service, /v3/api-docs
 
 jwt:
   secret: ${JWT_SECRET:dev-super-secret-key-that-is-at-least-256-bits-long-for-hmac-sha256-algorithm}
