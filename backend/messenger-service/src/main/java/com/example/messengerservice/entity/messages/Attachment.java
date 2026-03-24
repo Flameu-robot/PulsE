@@ -5,12 +5,15 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import org.hibernate.annotations.ColumnDefault;
 import org.hibernate.annotations.CreationTimestamp;
 
 import java.time.OffsetDateTime;
 
 @Entity
-@Table(name = "attachments")
+@Table(name = "attachments", indexes = {
+        @Index(name = "idx_attachment_message_id", columnList = "message_id")
+})
 @Getter
 @Setter
 @NoArgsConstructor
@@ -38,6 +41,7 @@ public class Attachment {
     private String minioObjectName;
 
     @CreationTimestamp
-    @Column(name = "created_at", updatable = false)
+    @Column(name = "created_at", updatable = false, nullable = false)
+    @ColumnDefault("now()")
     private OffsetDateTime createdAt;
 }

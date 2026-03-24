@@ -9,7 +9,14 @@ import java.time.OffsetDateTime;
 
 @Entity
 @Table(name = "channel_read_states",
-        uniqueConstraints = @UniqueConstraint(columnNames = {"user_id", "channel_id"}))
+        uniqueConstraints = @UniqueConstraint(
+                name = "uc_channel_read_states_user_channel",
+                columnNames = {"user_id", "channel_id"}
+        ),
+        indexes = {
+                @Index(name = "idx_read_state_user_id", columnList = "user_id"),
+                @Index(name = "idx_read_state_channel_id", columnList = "channel_id")
+        })
 @Getter
 @Setter
 public class ChannelReadState {

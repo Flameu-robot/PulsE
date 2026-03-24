@@ -3,9 +3,13 @@ package com.example.messengerservice.entity.groups;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
+import org.hibernate.annotations.ColumnDefault;
 
 @Entity
-@Table(name = "text_channels")
+@Table(name = "text_channels", indexes = {
+        @Index(name = "idx_channel_group_id", columnList = "group_id"),
+        @Index(name = "idx_channel_group_position", columnList = "group_id, position")
+})
 @Getter
 @Setter
 public class TextChannel {
@@ -26,6 +30,7 @@ public class TextChannel {
 
     private Integer position;
 
-    @Column(name = "is_deleted")
+    @Column(name = "is_deleted", nullable = false)
+    @ColumnDefault("false")
     private boolean deleted = false;
 }

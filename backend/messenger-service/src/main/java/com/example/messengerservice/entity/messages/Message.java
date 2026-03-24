@@ -3,6 +3,7 @@ package com.example.messengerservice.entity.messages;
 import com.example.messengerservice.entity.groups.TextChannel;
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.ColumnDefault;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
@@ -11,7 +12,13 @@ import java.util.ArrayList;
 import java.util.List;
 
 @Entity
-@Table(name = "messages")
+@Table(name = "messages", indexes = {
+        @Index(name = "idx_message_channel_id", columnList = "channel_id"),
+        @Index(name = "idx_message_channel_created", columnList = "channel_id, created_at DESC"),
+        @Index(name = "idx_message_author_id", columnList = "author_id"),
+        @Index(name = "idx_message_reply_to", columnList = "reply_to_id"),
+        @Index(name = "idx_message_created_at", columnList = "created_at")
+})
 @Getter
 @Setter
 @Builder
@@ -41,14 +48,17 @@ public class Message {
     @JoinColumn(name = "forward_from_id")
     private Message forwardFrom;
 
-    @Column(name = "is_edited")
+    @Column(name = "is_edited", nullable = false)
+    @ColumnDefault("false")
     private boolean edited = false;
 
-    @Column(name = "is_deleted")
+    @Column(name = "is_deleted", nullable = false)
+    @ColumnDefault("false")
     private boolean deleted = false;
 
     @CreationTimestamp
-    @Column(name = "created_at", updatable = false)
+    @Column(name = "created_at", updatable = false, nullable = false)
+    @ColumnDefault("now()")
     private OffsetDateTime createdAt;
 
     @UpdateTimestamp

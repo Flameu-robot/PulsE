@@ -5,6 +5,7 @@ import com.example.messengerservice.entity.enums.GroupType;
 import io.hypersistence.utils.hibernate.type.json.JsonBinaryType;
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.ColumnDefault;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.Type;
 import org.hibernate.annotations.UpdateTimestamp;
@@ -14,7 +15,11 @@ import java.util.ArrayList;
 import java.util.List;
 
 @Entity
-@Table(name = "chat_groups")
+@Table(name = "chat_groups", indexes = {
+        @Index(name = "idx_group_owner_id", columnList = "owner_id"),
+        @Index(name = "idx_group_type", columnList = "type"),
+        @Index(name = "idx_group_created_at", columnList = "created_at")
+})
 @Getter
 @Setter
 @Builder
@@ -48,11 +53,13 @@ public class Group {
     @Column(columnDefinition = "text")
     private String description;
 
-    @Column(name = "is_deleted")
+    @Column(name = "is_deleted", nullable = false)
+    @ColumnDefault("false")
     private boolean deleted = false;
 
     @CreationTimestamp
-    @Column(name = "created_at", updatable = false)
+    @Column(name = "created_at", updatable = false, nullable = false)
+    @ColumnDefault("now()")
     private OffsetDateTime createdAt;
 
     @UpdateTimestamp
