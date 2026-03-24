@@ -35,9 +35,11 @@
 |**owner_id**|`BIGINT`|ID создателя (FK на Identity Service).|
 |**name**|`VARCHAR(100)`|Название группы/канала/сервера.|
 |**type**|`VARCHAR(20)`|Тип: `PERSONAL` (ЛС), `GROUP` (Группа), `CHANNEL` (Канал).|
+|**dm_hash_key**|``VARCHAR(100)`|Нужен для персональных чатов (уникальный ключ)|
 |**features**|`JSONB`|**Ключевое поле.** Функциональные флаги.  <br>Пример: `{"voice_enabled": true, "roles_enabled": false}`.|
 |**avatar_url**|`VARCHAR(500)`|Ссылка на аватар группы.|
 |**description**|`TEXT`|Описание (био группы).|
+|**is_deleted**|`BOOL`|Софт удаление группы (для публичных чатов).|
 |**created_at**|`TIMESTAMPTZ`|Дата создания.|
 |**updated_at**|`TIMESTAMPTZ`|Дата обновления.|
 
@@ -50,7 +52,7 @@
 |**id**|`BIGSERIAL`|PK.|
 |**group_id**|`BIGINT`|FK на таблицу `groups`.|
 |**user_id**|`BIGINT`|ID пользователя (Identity Service).|
-|**role**|`VARCHAR(20)`|Роль: `OWNER`, `ADMIN`, `MEMBER`, `SUBSCRIBER` (для каналов).|
+|**permissions**|`LONG`|Побитовая маска для разных прав (нужно, чтобы потом перейти на RBAC).|
 |**joined_at**|`TIMESTAMPTZ`|Дата вступления.|
 |**muted**|`BOOLEAN`|Выключены ли уведомления для юзера.|
 |**last_read_message_id**|`BIGINT`|ID последнего прочитанного сообщения (для счетчиков непрочитанных).|
@@ -66,6 +68,18 @@
 |**name**|`VARCHAR(50)`|Название канала (например, "general").|
 |**topic**|`VARCHAR(200)`|Топик/описание канала.|
 |**position**|`INTEGER`|Порядок сортировки в списке.|
+|**is_deleted**|`BOOL`|Софт удаление группы (для публичных чатов).|
+
+#### Таблица: `channel_read_states` (Указатель на прочитанное сообщение для каждого канала)
+
+Нужно, если чат является группой и имеет несколько каналов
+
+|Поле|Тип данных|Описание|
+|---|---|---|
+|**user_id**|`BIGINT`|Кто прочитал.|
+|**channel_id**|`BIGINT`|В каком канале (FK на text_channels).|
+|**last_read_message_id**|`BIGINT`|ID последнего увиденного сообщения.|
+|**updated_at**|`TIMESTAMPTZ`|Время последнего обновления.|
 
 ---
 
@@ -84,6 +98,7 @@
 |**metadata**|`JSONB`|Дополнительные данные: `{ "edited": true, "edited_at": "..." }`.|
 |**reply_to_id**|`BIGINT`|FK на саму таблицу `messages` (Ответ на сообщение).|
 |**forward_from_id**|`BIGINT`|ID оригинального сообщения (Пересылка).|
+|**is_deleted**|`BOOL`|Софт удаление сообщения (для reply на сообщение).|
 |**created_at**|`TIMESTAMPTZ`|Время отправки. Индекс.|
 
 #### Таблица: `message_attachments`
