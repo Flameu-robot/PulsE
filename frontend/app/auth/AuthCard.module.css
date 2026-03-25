@@ -1,0 +1,73 @@
+@reference "tailwindcss";
+
+.authCard {
+    @apply w-full max-w-md mx-auto p-8 rounded-2xl shadow-xl border border-purple-500/20 bg-gray-900/80 backdrop-blur-md;
+}
+
+.title {
+    @apply text-3xl font-bold bg-gradient-to-r from-purple-400 via-pink-400 to-purple-400 bg-clip-text text-transparent;
+}
+
+.subtitle {
+    @apply text-gray-400 mt-2 text-center;
+}
+
+.tabContainer {
+    @apply flex gap-1.5 p-1.5 bg-gray-800/80 rounded-xl border border-purple-500/20;
+}
+
+.tabButton {
+    @apply flex-1 py-2.5 text-sm font-medium rounded-lg transition-all duration-200;
+}
+
+.tabActive {
+    @apply bg-purple-600 shadow-sm text-white;
+}
+
+.tabInactive {
+    @apply text-gray-400 hover:text-white hover:bg-gray-700/50;
+}
+
+.formContainer {
+    @apply space-y-5 mt-6;
+}
+
+.forgotLink {
+    @apply text-sm text-purple-400 hover:text-purple-300 transition-colors;
+}
+
+.termsText {
+    @apply text-sm text-gray-400;
+}
+
+.termsLink {
+    @apply text-purple-400 hover:text-purple-300 underline underline-offset-2 transition-colors;
+}
+
+.socialGrid {
+    @apply grid grid-cols-2 gap-4 mt-6;
+}
+
+.socialButton {
+    @apply flex items-center justify-center gap-2 py-2.5 border border-purple-500/30 rounded-lg text-gray-300 hover:bg-purple-500/10 hover:border-purple-500/50 transition-all duration-200 shadow-sm;
+}
+
+.dividerText {
+    @apply relative my-6;
+}
+
+.dividerLine {
+    @apply absolute inset-0 flex items-center;
+}
+
+.dividerLineInner {
+    @apply w-full border-t border-purple-500/30;
+}
+
+.dividerLabel {
+    @apply relative flex justify-center text-sm;
+}
+
+.dividerLabelSpan {
+    @apply bg-gray-900 px-4 text-gray-500;
+}
