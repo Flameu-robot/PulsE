@@ -25,6 +25,7 @@ import { UserProfileModal } from '../modal/userProfileModal/UserProfileModal'
 import { NotificationsModal } from '../modal/notificationsModal/NotificationsModal'
 import { NavItem as NavItemType } from './types'
 import { useLogout } from './useLogout'
+import { useProfile } from './useProfile'
 
 const PRIMARY_NAV: NavItemType[] = [
     { id: 'feed', icon: LayoutDashboard, label: 'Feed', href: '/main' },
@@ -143,6 +144,7 @@ const NavItem = ({ item, pathname }: { item: NavItemType, pathname: string | nul
 export default function Sidebar() {
     const pathname = usePathname()
     const { logout } = useLogout()
+    const { user } = useProfile()
     const [isProfileOpen, setIsProfileOpen] = useState(false)
     const [isNotifOpen, setIsNotifOpen] = useState(false)
 
@@ -195,14 +197,22 @@ export default function Sidebar() {
                             className="w-full flex items-center gap-3 p-2 bg-white/5 rounded-2xl border border-white/5 hidden lg:flex hover:bg-white/10 transition-colors cursor-pointer group"
                         >
                             <div className="w-10 h-10 rounded-full border-2 border-purple-500/20 p-0.5 shrink-0 group-hover:border-purple-500/50 transition-all">
-                                <img
-                                    src="https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100"
-                                    className="w-full h-full rounded-full object-cover"
-                                    alt="Profile"
-                                />
+                                {user?.avatarUrl ? (
+                                    <img
+                                        src={user.avatarUrl}
+                                        className="w-full h-full rounded-full object-cover"
+                                        alt="Profile"
+                                    />
+                                ) : (
+                                    <div className="w-full h-full rounded-full bg-purple-600/20 flex items-center justify-center text-xs text-purple-400 font-bold">
+                                        {user?.username?.charAt(0).toUpperCase()}
+                                    </div>
+                                )}
                             </div>
                             <div className="flex flex-col overflow-hidden text-left">
-                                <span className="text-sm font-bold text-white truncate">Alex Johnson</span>
+                                <span className="text-sm font-bold text-white truncate">
+                                    {user?.displayName || user?.username || 'Loading...'}
+                                </span>
                             </div>
                         </motion.button>
 

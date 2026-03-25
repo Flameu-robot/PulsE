@@ -70,15 +70,18 @@ async function fetcher(endpoint: string, options: RequestInit = {}): Promise<any
 }
 
 export const api = {
-    get: (endpoint: string, options?: RequestInit) =>
+    get: <T>(endpoint: string, options?: RequestInit): Promise<T> =>
         fetcher(endpoint, { ...options, method: 'GET' }),
 
-    post: (endpoint: string, body: any, options?: RequestInit) =>
+    post: <T>(endpoint: string, body: any, options?: RequestInit): Promise<T> =>
         fetcher(endpoint, { ...options, method: 'POST', body: JSON.stringify(body) }),
 
-    put: (endpoint: string, body: any, options?: RequestInit) =>
+    put: <T>(endpoint: string, body: any, options?: RequestInit): Promise<T> =>
         fetcher(endpoint, { ...options, method: 'PUT', body: JSON.stringify(body) }),
 
-    delete: (endpoint: string, options?: RequestInit) =>
+    patch: <T>(endpoint: string, body: any, options?: RequestInit): Promise<T> =>
+        fetcher(endpoint, { ...options, method: 'PATCH', body: JSON.stringify(body) }),
+
+    delete: <T>(endpoint: string, options?: RequestInit): Promise<T> =>
         fetcher(endpoint, { ...options, method: 'DELETE' }),
 };

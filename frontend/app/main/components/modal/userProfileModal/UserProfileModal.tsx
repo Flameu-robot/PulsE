@@ -1,11 +1,12 @@
-'use client'
+'use client';
 
-import React from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
-import { X, Settings, LogOut, Zap, Star, Camera, Check, ArrowLeft, AlertCircle } from 'lucide-react'
-import { UserProfileModalProps } from './types'
-import { useUserProfile } from './useUserProfile'
+import React from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { X, Settings, LogOut, Zap, Star, Camera, Check, ArrowLeft, AlertCircle } from 'lucide-react';
+import { UserProfileModalProps } from './types';
+import { useUserProfile } from './useUserProfile';
 
+// Компонент CurrentlyPlaying оставлен без изменений
 const CurrentlyPlaying = () => {
     return (
         <div className="mb-6 px-1">
@@ -40,12 +41,17 @@ const CurrentlyPlaying = () => {
                 </div>
             </div>
         </div>
-    )
-}
+    );
+};
 
-const Users = (props: any) => (
-    <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-)
+const UsersIcon = (props: any) => (
+    <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/>
+        <circle cx="9" cy="7" r="4"/>
+        <path d="M22 21v-2a4 4 0 0 0-3-3.87"/>
+        <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+    </svg>
+);
 
 export const UserProfileModal = ({ isOpen, onClose }: UserProfileModalProps) => {
     const {
@@ -55,10 +61,11 @@ export const UserProfileModal = ({ isOpen, onClose }: UserProfileModalProps) => 
         formik,
         handleAvatarChange,
         handleCancel,
-        inputClasses
-    } = useUserProfile()
+        inputClasses,
+        isLoading,
+        userInitial,
+    } = useUserProfile();
 
-    // @ts-ignore
     return (
         <AnimatePresence>
             {isOpen && (
@@ -70,12 +77,14 @@ export const UserProfileModal = ({ isOpen, onClose }: UserProfileModalProps) => 
                         onClick={!isEditing ? onClose : undefined}
                         className="fixed inset-0 bg-[#000]/80 backdrop-blur-md z-[100]"
                     />
+
                     <motion.div
                         initial={{ opacity: 0, scale: 0.95, y: 20 }}
                         animate={{ opacity: 1, scale: 1, y: 0 }}
                         exit={{ opacity: 0, scale: 0.95, y: 20 }}
                         className="fixed left-0 right-0 bottom-0 sm:left-1/2 sm:top-1/2 sm:bottom-auto sm:-translate-x-1/2 sm:-translate-y-1/2 w-full max-w-lg bg-[#0d0d0f] border-t sm:border border-white/5 rounded-t-[32px] sm:rounded-[40px] overflow-hidden z-[101] shadow-[0_0_50px_rgba(168,85,247,0.15)] max-h-[90vh] overflow-y-auto no-scrollbar"
                     >
+                        {/* остальной код компонента без изменений */}
                         <div className="relative h-32 sm:h-48 overflow-hidden">
                             <motion.div
                                 animate={{ backgroundPosition: ['0% 0%', '100% 100%'] }}
@@ -96,14 +105,20 @@ export const UserProfileModal = ({ isOpen, onClose }: UserProfileModalProps) => 
                         </div>
 
                         <div className="px-6 sm:px-10 pb-8 sm:pb-10 relative">
-                            <div className="relative -mt-12 sm:-mt-20 mb-4 sm:mb-6">
-                                <div className="relative group w-24 sm:w-32">
-                                    <div className="w-24 h-24 sm:w-32 sm:h-32 rounded-[28px] sm:rounded-[35px] border-[4px] sm:border-[6px] border-[#0d0d0f] overflow-hidden shadow-2xl relative bg-[#1a1a1e]">
-                                        <img
-                                            src={formik.values.avatar}
-                                            className="w-full h-full object-cover transition-transform duration-700"
-                                            alt="Avatar"
-                                        />
+                            <div className="flex flex-col items-center text-center -mt-20 sm:-mt-28 mb-6">
+                                <div className="relative group w-24 sm:w-32 mb-4">
+                                    <div className="w-24 h-24 sm:w-32 sm:h-32 rounded-[28px] sm:rounded-[35px] border-[4px] sm:border-[6px] border-[#0d0d0f] overflow-hidden shadow-2xl relative bg-[#1a1a1e] flex items-center justify-center">
+                                        {formik.values.avatarUrl ? (
+                                            <img
+                                                src={formik.values.avatarUrl}
+                                                className={`w-full h-full object-cover transition-transform duration-700 ${isLoading ? 'animate-pulse opacity-50' : 'opacity-100'}`}
+                                                alt="Avatar"
+                                            />
+                                        ) : (
+                                            <div className="text-5xl sm:text-7xl font-black text-white/20 select-none">
+                                                {isLoading ? '...' : userInitial}
+                                            </div>
+                                        )}
                                         {isEditing && (
                                             <button
                                                 type="button"
@@ -117,6 +132,10 @@ export const UserProfileModal = ({ isOpen, onClose }: UserProfileModalProps) => 
                                     {!isEditing && <div className="absolute bottom-1 right-1 w-4 h-4 sm:w-6 sm:h-6 bg-green-500 border-2 sm:border-4 border-[#0d0d0f] rounded-full" />}
                                     <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={handleAvatarChange} />
                                 </div>
+
+                                <h2 className="text-3xl sm:text-4xl font-black text-white tracking-tighter">
+                                    {isLoading ? '...' : formik.values.username}
+                                </h2>
                             </div>
 
                             <AnimatePresence mode="wait">
@@ -127,25 +146,28 @@ export const UserProfileModal = ({ isOpen, onClose }: UserProfileModalProps) => 
                                         animate={{ opacity: 1, x: 0 }}
                                         exit={{ opacity: 0, x: 10 }}
                                     >
-                                        <div className="mb-6 text-left">
-                                            <h2 className="text-2xl sm:text-3xl font-black text-white tracking-tighter mb-1">{formik.values.fullName}</h2>
-                                            <p className="text-gray-500 font-medium text-xs sm:text-sm flex items-center gap-2 mb-4">
-                                                @{formik.values.username} <span className="w-1 h-1 rounded-full bg-gray-700" /> Designer & Developer
-                                            </p>
-                                            <div className="p-4 bg-white/[0.02] border border-white/[0.05] rounded-2xl">
-                                                <p className="text-gray-400 text-xs sm:text-sm leading-relaxed">{formik.values.bio}</p>
+                                        {formik.values.bio && (
+                                            <div className="mb-6 p-4 bg-white/[0.02] border border-white/[0.05] rounded-2xl text-left">
+                                                <p className="text-gray-400 text-xs sm:text-sm leading-relaxed">
+                                                    {formik.values.bio}
+                                                </p>
                                             </div>
-                                        </div>
+                                        )}
 
                                         <div className="grid grid-cols-3 gap-2 sm:gap-3 mb-6 sm:mb-8">
                                             {[
-                                                { label: 'Followers', count: '12.4k', icon: Users },
+                                                { label: 'Followers', count: '12.4k', icon: UsersIcon },
                                                 { label: 'Ranking', count: '#12', icon: Star },
                                                 { label: 'Reach', count: '84k', icon: Zap },
                                             ].map((stat) => (
-                                                <div key={stat.label} className="relative group overflow-hidden p-3 sm:p-4 bg-white/[0.02] border border-white/[0.05] rounded-2xl sm:rounded-3xl transition-all hover:bg-white/[0.04]">
+                                                <div
+                                                    key={stat.label}
+                                                    className="relative group overflow-hidden p-3 sm:p-4 bg-white/[0.02] border border-white/[0.05] rounded-2xl sm:rounded-3xl transition-all hover:bg-white/[0.04]"
+                                                >
                                                     <div className="text-white text-sm sm:text-lg font-black mb-0.5">{stat.count}</div>
-                                                    <div className="text-[8px] sm:text-[9px] text-gray-500 uppercase font-bold tracking-widest">{stat.label}</div>
+                                                    <div className="text-[8px] sm:text-[9px] text-gray-500 uppercase font-bold tracking-widest">
+                                                        {stat.label}
+                                                    </div>
                                                 </div>
                                             ))}
                                         </div>
@@ -157,10 +179,12 @@ export const UserProfileModal = ({ isOpen, onClose }: UserProfileModalProps) => 
                                                 whileHover={{ scale: 1.02 }}
                                                 whileTap={{ scale: 0.98 }}
                                                 onClick={() => setIsEditing(true)}
-                                                className="flex items-center justify-center gap-2 p-3 sm:p-4 bg-white/[0.02] border border-white/[0.05] rounded-[20px] sm:rounded-[24px] text-gray-400 hover:text-white hover:bg-white/[0.05] transition-all font-bold text-sm"
+                                                disabled={isLoading}
+                                                className="flex items-center justify-center gap-2 p-3 sm:p-4 bg-white/[0.02] border border-white/[0.05] rounded-[20px] sm:rounded-[24px] text-gray-400 hover:text-white hover:bg-white/[0.05] disabled:opacity-50 transition-all font-bold text-sm"
                                             >
                                                 <Settings className="w-4 h-4" /> Edit
                                             </motion.button>
+
                                             <motion.button
                                                 whileHover={{ scale: 1.02 }}
                                                 whileTap={{ scale: 0.98 }}
@@ -180,35 +204,45 @@ export const UserProfileModal = ({ isOpen, onClose }: UserProfileModalProps) => 
                                         className="space-y-4"
                                     >
                                         <div className="space-y-1">
-                                            <label className="text-[10px] uppercase font-black text-gray-500 ml-1">Full Name</label>
-                                            <input name="fullName" className={inputClasses('fullName')} {...formik.getFieldProps('fullName')} />
-                                            {formik.touched.fullName && formik.errors.fullName && (
-                                                <motion.div initial={{ opacity: 0, y: -5 }} animate={{ opacity: 1, y: 0 }} className="flex items-center gap-1.5 text-red-400 text-[10px] font-bold ml-1">
-                                                    <AlertCircle className="w-3 h-3" /> {formik.errors.fullName}
-                                                </motion.div>
-                                            )}
-                                        </div>
-                                        <div className="space-y-1">
                                             <label className="text-[10px] uppercase font-black text-gray-500 ml-1">Username</label>
                                             <div className="relative">
                                                 <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 text-sm">@</span>
-                                                <input name="username" className={`${inputClasses('username')} pl-7`} {...formik.getFieldProps('username')} />
+                                                <input
+                                                    name="username"
+                                                    className={`${inputClasses('username')} pl-7`}
+                                                    {...formik.getFieldProps('username')}
+                                                />
                                             </div>
                                             {formik.touched.username && formik.errors.username && (
-                                                <motion.div initial={{ opacity: 0, y: -5 }} animate={{ opacity: 1, y: 0 }} className="flex items-center gap-1.5 text-red-400 text-[10px] font-bold ml-1">
-                                                    <AlertCircle className="w-3 h-3" /> {formik.errors.username}
+                                                <motion.div
+                                                    initial={{ opacity: 0, y: -5 }}
+                                                    animate={{ opacity: 1, y: 0 }}
+                                                    className="flex items-center gap-1.5 text-red-400 text-[10px] font-bold ml-1"
+                                                >
+                                                    <AlertCircle className="w-3 h-3" /> {formik.errors.username as string}
                                                 </motion.div>
                                             )}
                                         </div>
+
                                         <div className="space-y-1">
                                             <label className="text-[10px] uppercase font-black text-gray-500 ml-1">Bio</label>
-                                            <textarea name="bio" rows={3} className={`${inputClasses('bio')} resize-none`} {...formik.getFieldProps('bio')} />
+                                            <textarea
+                                                name="bio"
+                                                className={inputClasses('bio')}
+                                                rows={3}
+                                                {...formik.getFieldProps('bio')}
+                                            />
                                             {formik.touched.bio && formik.errors.bio && (
-                                                <motion.div initial={{ opacity: 0, y: -5 }} animate={{ opacity: 1, y: 0 }} className="flex items-center gap-1.5 text-red-400 text-[10px] font-bold ml-1">
-                                                    <AlertCircle className="w-3 h-3" /> {formik.errors.bio}
+                                                <motion.div
+                                                    initial={{ opacity: 0, y: -5 }}
+                                                    animate={{ opacity: 1, y: 0 }}
+                                                    className="flex items-center gap-1.5 text-red-400 text-[10px] font-bold ml-1"
+                                                >
+                                                    <AlertCircle className="w-3 h-3" /> {formik.errors.bio as string}
                                                 </motion.div>
                                             )}
                                         </div>
+
                                         <div className="grid grid-cols-2 gap-3 pt-2">
                                             <motion.button
                                                 type="button"
@@ -219,14 +253,15 @@ export const UserProfileModal = ({ isOpen, onClose }: UserProfileModalProps) => 
                                             >
                                                 <ArrowLeft className="w-4 h-4" /> Cancel
                                             </motion.button>
+
                                             <motion.button
                                                 type="submit"
                                                 whileHover={{ scale: 1.02, backgroundColor: '#7e22ce' }}
                                                 whileTap={{ scale: 0.98 }}
-                                                disabled={!formik.isValid || !formik.dirty}
+                                                disabled={!formik.isValid || !formik.dirty || isLoading}
                                                 className="flex items-center justify-center gap-2 p-4 bg-purple-600 disabled:opacity-50 disabled:cursor-not-allowed rounded-2xl text-white font-bold text-sm shadow-lg shadow-purple-600/20 transition-all"
                                             >
-                                                <Check className="w-4 h-4" /> Save
+                                                <Check className="w-4 h-4" /> {isLoading ? 'Saving...' : 'Save'}
                                             </motion.button>
                                         </div>
                                     </motion.form>
@@ -237,5 +272,5 @@ export const UserProfileModal = ({ isOpen, onClose }: UserProfileModalProps) => 
                 </>
             )}
         </AnimatePresence>
-    )
-}
+    );
+};
