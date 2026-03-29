@@ -31,8 +31,8 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @SpringBootTest(properties = {
-        "internal.security.token=test-secret-token",
-        "internal.security.header-name=X-Internal-Secret"
+        "gateway.security.token=test-secret-token",
+        "gateway.security.header-name=X-Internal-Secret"
 })
 @AutoConfigureMockMvc
 @ActiveProfiles("test")

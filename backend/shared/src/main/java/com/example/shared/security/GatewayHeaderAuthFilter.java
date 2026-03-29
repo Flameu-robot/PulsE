@@ -89,7 +89,7 @@ public class GatewayHeaderAuthFilter extends OncePerRequestFilter {
 
                 log.debug("Authenticated request for user: {}", username);
 
-            } catch (NumberFormatException e) {
+            } catch (NumberFormatException _) {
                 log.error("Malformed X-User-Id header: {}", userId);
                 sendErrorResponse(response, HttpServletResponse.SC_BAD_REQUEST,
                         "Invalid User ID format");

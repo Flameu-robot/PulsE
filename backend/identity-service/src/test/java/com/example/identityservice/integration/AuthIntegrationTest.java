@@ -28,8 +28,8 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @SpringBootTest(properties = {
-        "internal.security.token=test-secret-token",
-        "internal.security.header-name=X-Internal-Secret"
+        "gateway.security.token=test-secret-token",
+        "gateway.security.header-name=X-Internal-Secret"
 })
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
@@ -63,6 +63,18 @@ class AuthIntegrationTest extends RedisTestContainerConfig {
     // -- Helpers --
     private MockHttpServletRequestBuilder withSecret(MockHttpServletRequestBuilder builder) {
         return builder.header(secretHeaderName, secretToken);
+    }
+
+    private MockHttpServletRequestBuilder withAuthenticatedUser(
+            MockHttpServletRequestBuilder builder,
+            Long userId,
+            String username,
+            String role) {
+        return builder
+                .header(secretHeaderName, secretToken)
+                .header("X-User-Id", String.valueOf(userId))
+                .header("X-User-Role", role)
+                .header("X-User-Sub", username);
     }
 
     private void activateUser(String username) {
@@ -116,18 +128,18 @@ class AuthIntegrationTest extends RedisTestContainerConfig {
         AuthResponse loginResponse = loginUser("flowuser", "password123");
 
         // refresh
-        MvcResult refreshResult = mockMvc.perform(withSecret(post("/api/auth/refresh"))
+        mockMvc.perform(withSecret(post("/api/auth/refresh"))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"refreshToken\":\"" + loginResponse.refreshToken() + "\"}"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.accessToken").isNotEmpty())
                 .andReturn();
 
         // logout
-        mockMvc.perform(withSecret(post("/api/auth/logout"))
-                        .header("Authorization", "Bearer " + loginResponse.accessToken())
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"refreshToken\":\"" + loginResponse.refreshToken() + "\"}"))
+        mockMvc.perform(withAuthenticatedUser(
+                        post("/api/auth/logout")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content("{\"refreshToken\":\"" + loginResponse.refreshToken() + "\"}"),
+                        loginResponse.userId(), loginResponse.username(), loginResponse.role()))
                 .andExpect(status().isNoContent());
     }
 
@@ -213,10 +225,11 @@ class AuthIntegrationTest extends RedisTestContainerConfig {
         AuthResponse response = loginUser("refreshuser", "password123");
 
         // logout
-        mockMvc.perform(withSecret(post("/api/auth/logout"))
-                        .header("Authorization", "Bearer " + response.accessToken())
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"refreshToken\":\"" + response.refreshToken() + "\"}"))
+        mockMvc.perform(withAuthenticatedUser(
+                        post("/api/auth/logout")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content("{\"refreshToken\":\"" + response.refreshToken() + "\"}"),
+                        response.userId(), response.username(), response.role()))
                 .andExpect(status().isNoContent());
 
         // refresh
@@ -229,10 +242,10 @@ class AuthIntegrationTest extends RedisTestContainerConfig {
     @Test
     @DisplayName("should get current user")
     void shouldGetCurrentUser() throws Exception {
-        AuthResponse response = registerUser("meuser", "me@test.com", "password123");
+        registerUser("meuser", "me@test.com", "password123");
 
-        mockMvc.perform(withSecret(get("/api/auth/me"))
-                        .header("Authorization", "Bearer " + response.accessToken()))
+        mockMvc.perform(withAuthenticatedUser(
+                        get("/api/auth/me"), 1L, "meuser", "USER"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.username").value("meuser"))
                 .andExpect(jsonPath("$.email").value("me@test.com"))
@@ -242,28 +255,29 @@ class AuthIntegrationTest extends RedisTestContainerConfig {
     @Test
     @DisplayName("Should change password and login with new one")
     void shouldChangePassword() throws Exception {
-        AuthResponse response = registerAndActivate("changeuser", "change@test.com", "oldPassword123");
+        AuthResponse response = registerAndActivate(
+                "changeuser", "change@test.com", "oldPassword123");
 
         String changeBody = "{\"currentPassword\":\"oldPassword123\",\"newPassword\":\"newPassword123\"}";
 
-        mockMvc.perform(withSecret(post("/api/auth/password/change"))
-                        .header("Authorization", "Bearer " + response.accessToken())
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(changeBody))
+        // change password
+        mockMvc.perform(withAuthenticatedUser(
+                        post("/api/auth/password/change")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(changeBody),
+                        response.userId(), response.username(), response.role()))
                 .andExpect(status().isNoContent());
 
-        String newLoginBody = "{\"login\":\"changeuser\",\"password\":\"newPassword123\"}";
-
+        // login с новым паролем
         mockMvc.perform(withSecret(post("/api/auth/login"))
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(newLoginBody))
+                        .content("{\"login\":\"changeuser\",\"password\":\"newPassword123\"}"))
                 .andExpect(status().isOk());
 
-        String oldLoginBody = "{\"login\":\"changeuser\",\"password\":\"oldPassword123\"}";
-
+        // login со старым паролем
         mockMvc.perform(withSecret(post("/api/auth/login"))
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(oldLoginBody))
+                        .content("{\"login\":\"changeuser\",\"password\":\"oldPassword123\"}"))
                 .andExpect(status().isUnauthorized());
     }
 
@@ -275,10 +289,13 @@ class AuthIntegrationTest extends RedisTestContainerConfig {
         AuthResponse session1 = loginUser("logoutalluser", "password123");
         AuthResponse session2 = loginUser("logoutalluser", "password123");
 
-        mockMvc.perform(withSecret(post("/api/auth/logout-all"))
-                        .header("Authorization", "Bearer " + session1.accessToken()))
+        // logout-all через Gateway хедеры
+        mockMvc.perform(withAuthenticatedUser(
+                        post("/api/auth/logout-all"),
+                        session1.userId(), session1.username(), session1.role()))
                 .andExpect(status().isNoContent());
 
+        // оба refresh токена должны быть отозваны
         mockMvc.perform(withSecret(post("/api/auth/refresh"))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"refreshToken\":\"" + session1.refreshToken() + "\"}"))

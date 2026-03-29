@@ -67,18 +67,19 @@ public class RateLimitFilter extends OncePerRequestFilter {
     }
 
     private int[] findLimits(String path) {
-        for (Map.Entry<String, int[]> entry : RATE_LIMITS.entrySet()) {
-            if (path.equals(entry.getKey())) {
-                return entry.getValue();
-            }
-        }
-        return new int[0];
+        return RATE_LIMITS.get(path);
     }
 
     private String getClientIp(HttpServletRequest request) {
         String xForwardedFor = request.getHeader("X-Forwarded-For");
         if (xForwardedFor != null && !xForwardedFor.isBlank()) {
-            return xForwardedFor.split(",")[0].trim();
+            String[] parts = xForwardedFor.split(",");
+            if (parts.length > 0) {
+                String ip = parts[0].trim();
+                if (!ip.isBlank()) {
+                    return ip;
+                }
+            }
         }
         return request.getRemoteAddr();
     }

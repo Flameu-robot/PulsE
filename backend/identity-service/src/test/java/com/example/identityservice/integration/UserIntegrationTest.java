@@ -26,8 +26,8 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @SpringBootTest(properties = {
-        "internal.security.token=test-secret-token",
-        "internal.security.header-name=X-Internal-Secret"
+        "gateway.security.token=test-secret-token",
+        "gateway.security.header-name=X-Internal-Secret"
 })
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
@@ -42,10 +42,10 @@ class UserIntegrationTest extends RedisTestContainerConfig {
     @Autowired
     private UserRepository userRepository;
 
-    @Value("${internal.security.header-name}")
+    @Value("${gateway.security.header-name}")
     private String secretHeaderName;
 
-    @Value("${internal.security.token}")
+    @Value("${gateway.security.token}")
     private String secretToken;
 
     private ObjectMapper objectMapper;
@@ -59,18 +59,30 @@ class UserIntegrationTest extends RedisTestContainerConfig {
     }
 
     // -- Helpers --
-    private MockHttpServletRequestBuilder withSecret(MockHttpServletRequestBuilder builder) {
+    private MockHttpServletRequestBuilder withSecret(
+            MockHttpServletRequestBuilder builder) {
         return builder.header(secretHeaderName, secretToken);
     }
 
-    private void activateUser(String username) {
-        User user = userRepository.findByUsername(username).orElseThrow();
+    private MockHttpServletRequestBuilder asUser(
+            MockHttpServletRequestBuilder builder,
+            AuthResponse response) {
+        return builder
+                .header(secretHeaderName, secretToken)
+                .header("X-User-Id", String.valueOf(response.userId()))
+                .header("X-User-Role", response.role())
+                .header("X-User-Sub", response.username());
+    }
+
+    private void activateUser() {
+        User user = userRepository.findByUsername("deleteuser").orElseThrow();
         user.setStatus(UserStatus.ACTIVE);
         userRepository.save(user);
     }
 
-    private AuthResponse registerUser(String username, String email, String password) throws Exception {
-        RegisterRequest request = new RegisterRequest(username, email, password);
+    private AuthResponse registerUser(
+            String username, String email) throws Exception {
+        RegisterRequest request = new RegisterRequest(username, email, "password123");
 
         MvcResult result = mockMvc.perform(withSecret(post("/api/auth/register"))
                         .contentType(MediaType.APPLICATION_JSON)
@@ -84,19 +96,18 @@ class UserIntegrationTest extends RedisTestContainerConfig {
         );
     }
 
-    private AuthResponse registerAndActivate(String username, String email, String password) throws Exception {
-        AuthResponse response = registerUser(username, email, password);
-        activateUser(username);
+    private AuthResponse registerAndActivate() throws Exception {
+        AuthResponse response = registerUser("deleteuser", "delete@test.com");
+        activateUser();
         return response;
     }
 
     @Test
     @DisplayName("Should get own profile")
     void shouldGetOwnProfile() throws Exception {
-        AuthResponse response = registerUser("profileuser", "profile@test.com", "password123");
+        AuthResponse response = registerUser("profileuser", "profile@test.com");
 
-        mockMvc.perform(withSecret(get("/api/users/me"))
-                        .header("Authorization", "Bearer " + response.accessToken()))
+        mockMvc.perform(asUser(get("/api/users/me"), response))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.username").value("profileuser"))
                 .andExpect(jsonPath("$.email").value("profile@test.com"));
@@ -112,12 +123,11 @@ class UserIntegrationTest extends RedisTestContainerConfig {
     @Test
     @DisplayName("Should update profile")
     void shouldUpdateProfile() throws Exception {
-        AuthResponse response = registerUser("updateuser", "update@test.com", "password123");
+        AuthResponse response = registerUser("updateuser", "update@test.com");
 
         String updateBody = "{\"bio\":\"My new bio\",\"phone\":\"+71234567890\"}";
 
-        mockMvc.perform(withSecret(patch("/api/users/me"))
-                        .header("Authorization", "Bearer " + response.accessToken())
+        mockMvc.perform(asUser(patch("/api/users/me"), response)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(updateBody))
                 .andExpect(status().isOk())
@@ -129,8 +139,9 @@ class UserIntegrationTest extends RedisTestContainerConfig {
     @Test
     @DisplayName("should get public profile without sensitive data")
     void shouldGetPublicProfile() throws Exception {
-        AuthResponse response = registerUser("publicuser", "public@test.com", "password123");
+        AuthResponse response = registerUser("publicuser", "public@test.com");
 
+        // Open route
         mockMvc.perform(withSecret(get("/api/users/" + response.userId())))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.username").value("publicuser"))
@@ -148,10 +159,10 @@ class UserIntegrationTest extends RedisTestContainerConfig {
     @Test
     @DisplayName("should delete account and prevent login")
     void shouldDeleteAccount() throws Exception {
-        AuthResponse response = registerAndActivate("deleteuser", "delete@test.com", "password123");
+        AuthResponse response = registerAndActivate(
+        );
 
-        mockMvc.perform(withSecret(delete("/api/users/me"))
-                        .header("Authorization", "Bearer " + response.accessToken()))
+        mockMvc.perform(asUser(delete("/api/users/me"), response))
                 .andExpect(status().isNoContent());
 
         String loginBody = "{\"login\":\"deleteuser\",\"password\":\"password123\"}";

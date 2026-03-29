@@ -111,7 +111,7 @@ class JwtAuthenticationFilterTest {
         @DisplayName("Adds X-Anonymous-Request header")
         void shouldAddAnonymousHeader() {
             MockServerWebExchange exchange = MockServerWebExchange.from(
-                    MockServerHttpRequest.get("/api/auth/login").build()
+                    MockServerHttpRequest.post("/api/auth/login").build()
             );
 
             StepVerifier.create(filter.filter(exchange, chain)).verifyComplete();
@@ -137,7 +137,7 @@ class JwtAuthenticationFilterTest {
         @DisplayName("Strips spoofed headers on open endpoint")
         void shouldStripSpoofedHeadersOnOpenEndpoint() {
             MockServerWebExchange exchange = MockServerWebExchange.from(
-                    MockServerHttpRequest.get("/api/auth/register")
+                    MockServerHttpRequest.post("/api/auth/register")
                             .header("X-User-Id", "999")
                             .header("X-User-Role", "ADMIN")
                             .header("X-User-Sub", "hacker")

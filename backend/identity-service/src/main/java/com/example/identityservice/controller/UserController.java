@@ -4,6 +4,7 @@ import com.example.identityservice.dto.request.UpdateProfileRequest;
 import com.example.identityservice.dto.response.PublicUserResponse;
 import com.example.identityservice.dto.response.UserResponse;
 import com.example.identityservice.service.UserService;
+import com.example.shared.security.GatewayPrincipal;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -22,26 +23,26 @@ public class UserController {
 
     @GetMapping("/me")
     public ResponseEntity<UserResponse> getMyProfile(
-            @AuthenticationPrincipal UserDetails userDetails
+            @AuthenticationPrincipal GatewayPrincipal principal
     ) {
-        UserResponse response = userService.getProfile(userDetails.getUsername());
+        UserResponse response = userService.getProfile(principal.getUsername());
         return ResponseEntity.ok(response);
     }
 
     @PatchMapping("/me")
     public ResponseEntity<UserResponse> updateMyProfile(
-            @AuthenticationPrincipal UserDetails userDetails,
+            @AuthenticationPrincipal GatewayPrincipal principal,
             @Valid @RequestBody UpdateProfileRequest request
     ) {
-        UserResponse response = userService.updateProfile(userDetails.getUsername(), request);
+        UserResponse response = userService.updateProfile(principal.getUsername(), request);
         return ResponseEntity.ok(response);
     }
 
     @DeleteMapping("/me")
     public ResponseEntity<Void> deleteMyAccount(
-            @AuthenticationPrincipal UserDetails userDetails
+            @AuthenticationPrincipal GatewayPrincipal principal
     ) {
-        userService.deleteAccount(userDetails.getUsername());
+        userService.deleteAccount(principal.getUsername());
         return ResponseEntity.noContent().build();
     }
 

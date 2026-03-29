@@ -40,6 +40,7 @@ public class SecurityConfig {
         http
                 .csrf(AbstractHttpConfigurer::disable)
                 .cors(AbstractHttpConfigurer::disable)
+                .anonymous(AbstractHttpConfigurer::disable)
                 .sessionManagement(session ->
                         session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
                 )
@@ -67,6 +68,7 @@ public class SecurityConfig {
                                 "/api/auth/password/reset",
                                 "/api/auth/webauthn/login/**"
                         ).permitAll()
+                        .requestMatchers("/api/users/me").authenticated()
                         .requestMatchers(HttpMethod.GET, "/api/users/{id}").permitAll()
 
                         // Всё остальное с аутентификацией

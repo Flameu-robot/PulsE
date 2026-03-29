@@ -7,6 +7,7 @@ import com.example.identityservice.dto.request.RegisterRequest;
 import com.example.identityservice.dto.response.AuthResponse;
 import com.example.identityservice.dto.response.UserResponse;
 import com.example.identityservice.service.AuthService;
+import com.example.shared.security.GatewayPrincipal;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
@@ -54,35 +55,35 @@ public class AuthController {
 
     @PostMapping("/logout")
     public ResponseEntity<Void> logout(
-            @AuthenticationPrincipal UserDetails userDetails,
+            @AuthenticationPrincipal GatewayPrincipal principal,
             @Valid @RequestBody RefreshTokenRequest request
     ) {
-        authService.logout(userDetails.getUsername(), request.refreshToken());
+        authService.logout(principal.getUsername(), request.refreshToken());
         return ResponseEntity.noContent().build();
     }
 
     @PostMapping("/logout-all")
     public ResponseEntity<Void> logoutAll(
-            @AuthenticationPrincipal UserDetails userDetails
+            @AuthenticationPrincipal GatewayPrincipal principal
     ) {
-        authService.logoutAll(userDetails.getUsername());
+        authService.logoutAll(principal.getUsername());
         return ResponseEntity.noContent().build();
     }
 
     @GetMapping("/me")
     public ResponseEntity<UserResponse> getCurrentUser(
-            @AuthenticationPrincipal UserDetails userDetails
+            @AuthenticationPrincipal GatewayPrincipal principal
     ) {
-        UserResponse response = authService.getCurrentUser(userDetails.getUsername());
+        UserResponse response = authService.getCurrentUser(principal.getUsername());
         return ResponseEntity.ok(response);
     }
 
     @PostMapping("/password/change")
     public ResponseEntity<Void> changePassword(
-            @AuthenticationPrincipal UserDetails userDetails,
+            @AuthenticationPrincipal GatewayPrincipal principal,
             @Valid @RequestBody ChangePasswordRequest request
     ) {
-        authService.changePassword(userDetails.getUsername(), request);
+        authService.changePassword(principal.getUsername(), request);
         return ResponseEntity.noContent().build();
     }
 }
