@@ -67,8 +67,8 @@ public class Group {
     private OffsetDateTime updatedAt;
 
     @OneToMany(mappedBy = "group", cascade = CascadeType.ALL)
-    private List<GroupMember> members = new ArrayList<>();;
+    private List<GroupMember> members = new ArrayList<>();
 
     @OneToMany(mappedBy = "group", cascade = CascadeType.ALL)
-    private List<TextChannel> channels = new ArrayList<>();;
+    private List<TextChannel> channels = new ArrayList<>();
 }
