@@ -49,7 +49,7 @@ public class BookmarkService {
 
     @Transactional(readOnly = true)
     public PagedResponse<PostResponse> getBookmarkedPosts(Long userId, Pageable pageable) {
-        var page = bookmarkRepository.findByUserIdOrderByCreatedAtDesc(userId, pageable)
+        var page = bookmarkRepository.findByUserId(userId, pageable)
                 .map(bookmark -> {
                     var post = bookmark.getPost();
                     boolean liked = likeRepository.existsByPostIdAndUserId(post.getId(), userId);

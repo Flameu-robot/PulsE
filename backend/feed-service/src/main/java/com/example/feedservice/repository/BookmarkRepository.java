@@ -17,7 +17,12 @@ public interface BookmarkRepository extends JpaRepository<Bookmark, Long> {
 
     boolean existsByUserIdAndPostId(Long userId, Long postId);
 
-    Page<Bookmark> findByUserIdOrderByCreatedAtDesc(Long userId, Pageable pageable);
+    @Query("""
+            SELECT b FROM Bookmark b
+            WHERE b.userId = :userId
+            ORDER BY b.createdAt DESC
+            """)
+    Page<Bookmark> findByUserId(@Param("userId") Long userId, Pageable pageable);
 
     @Query("""
             SELECT b.post.id FROM Bookmark b

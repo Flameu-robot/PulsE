@@ -7,9 +7,7 @@ import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 
 import java.time.Instant;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 @Entity
 @Table(name = "posts")
@@ -52,18 +50,18 @@ public class Post {
     @Builder.Default
     @OneToMany(mappedBy = "post", cascade = CascadeType.ALL, orphanRemoval = true)
     @OrderBy("orderIndex ASC")
-    private List<PostAttachment> attachments = new ArrayList<>();
+    private Set<PostAttachment> attachments = new LinkedHashSet<>();
 
     @Builder.Default
     @OneToMany(mappedBy = "post", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<PostMusicLink> musicLinks = new ArrayList<>();
+    private Set<PostMusicLink> musicLinks = new LinkedHashSet<>();
 
-    @OneToOne(mappedBy = "post", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OneToOne(mappedBy = "post", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     private PostStats stats;
 
     @Builder.Default
     @OneToMany(mappedBy = "post", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<PostGroup> postGroups = new ArrayList<>();
+    private Set<PostGroup> postGroups = new LinkedHashSet<>();
 
     @PrePersist
     protected void onCreate() {

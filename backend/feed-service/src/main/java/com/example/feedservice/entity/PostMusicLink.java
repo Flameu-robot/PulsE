@@ -26,4 +26,17 @@ public class PostMusicLink {
     @Column(name = "listen_count", nullable = false)
     @Builder.Default
     private int listenCount = 0;
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        PostMusicLink that = (PostMusicLink) o;
+        return id != null && id.equals(that.id);
+    }
+
+    @Override
+    public int hashCode() {
+        return getClass().hashCode();
+    }
 }

@@ -32,4 +32,18 @@ public class PostGroup {
     protected void onCreate() {
         createdAt = Instant.now();
     }
+
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        PostGroup that = (PostGroup) o;
+        return id != null && id.equals(that.id);
+    }
+
+    @Override
+    public int hashCode() {
+        return getClass().hashCode();
+    }
 }

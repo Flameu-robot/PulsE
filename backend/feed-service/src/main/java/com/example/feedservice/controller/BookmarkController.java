@@ -14,6 +14,8 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
 
+import static com.example.feedservice.util.PageableUtils.withoutSort;
+
 @RestController
 @RequiredArgsConstructor
 public class BookmarkController {
@@ -51,6 +53,6 @@ public class BookmarkController {
             @CurrentUserId Long userId,
             @PageableDefault(size = 20) Pageable pageable) {
 
-        return bookmarkService.getBookmarkedPosts(userId, pageable);
+        return bookmarkService.getBookmarkedPosts(userId, withoutSort(pageable));
     }
 }

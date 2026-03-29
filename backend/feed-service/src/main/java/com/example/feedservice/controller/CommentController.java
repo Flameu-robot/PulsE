@@ -13,6 +13,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import static com.example.feedservice.util.PageableUtils.withoutSort;
+
 @RestController
 @RequiredArgsConstructor
 public class CommentController {
@@ -34,7 +36,7 @@ public class CommentController {
             @PathVariable Long postId,
             @PageableDefault(size = 20) Pageable pageable) {
 
-        return commentService.getRootComments(postId, pageable);
+        return commentService.getRootComments(postId, withoutSort(pageable));
     }
 
     @GetMapping("/api/comments/{commentId}/replies")
@@ -42,7 +44,7 @@ public class CommentController {
             @PathVariable Long commentId,
             @PageableDefault(size = 10) Pageable pageable) {
 
-        return commentService.getReplies(commentId, pageable);
+        return commentService.getReplies(commentId, withoutSort(pageable));
     }
 
     @DeleteMapping("/api/comments/{commentId}")

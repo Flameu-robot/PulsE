@@ -37,10 +37,8 @@ public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
 
     private final JwtUtils jwtUtils;
 
-    private final AntPathMatcher pathMatcher =
-            new AntPathMatcher();
+    private final AntPathMatcher pathMatcher = new AntPathMatcher();
 
-    // Список путей, не требующих авторизации
     private final List<RouteRule> openApiEndpoints = List.of(
             // Identity-service
             new RouteRule("POST", "/api/auth/register"),
@@ -55,8 +53,14 @@ public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
             new RouteRule(null, "/oauth2/**"),
 
             // Feed-service
-            "/api/posts/*/comments",
-            "/api/comments/*/replies",
+            new RouteRule("GET", "/api/posts/**"),
+            new RouteRule("GET", "/api/feed/explore"),
+            new RouteRule("GET", "/api/users/*/posts"),
+            new RouteRule("GET", "/api/users/*/followers"),
+            new RouteRule("GET", "/api/users/*/following"),
+            new RouteRule("GET", "/api/users/*/follow/counts"),
+            new RouteRule("GET", "/api/groups/*/posts"),
+            new RouteRule("GET", "/api/comments/*/replies"),
 
             // Swagger
             new RouteRule(null, "/swagger-ui.html"),
@@ -89,7 +93,6 @@ public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
 
         // Пропуск открытых эндпоинтов
         if (isOpenEndpoint(path, method)) {
-            // Маркер отсутствия аутентификации
             requestBuilder.header("X-Anonymous-Request", "true");
             return chain.filter(exchange.mutate().request(requestBuilder.build()).build());
         }

@@ -231,21 +231,22 @@ public class PostService {
         );
     }
 
-    private List<AttachmentResponse> mapAttachments(List<PostAttachment> attachments) {
+    private List<AttachmentResponse> mapAttachments(Set<PostAttachment> attachments) {
         if (attachments == null) return List.of();
         return attachments.stream()
+                .sorted(Comparator.comparingInt(PostAttachment::getOrderIndex))
                 .map(a -> new AttachmentResponse(
                         a.getId(), a.getMediaType(), a.getUrl(),
                         a.getPreviewUrl(), a.getOrderIndex(), a.getMetadata()))
                 .toList();
     }
 
-    private List<Long> mapTrackIds(List<PostMusicLink> links) {
+    private List<Long> mapTrackIds(Set<PostMusicLink> links) {
         if (links == null) return List.of();
         return links.stream().map(PostMusicLink::getTrackId).toList();
     }
 
-    private List<MusicLinkResponse> mapMusicLinks(List<PostMusicLink> links) {
+    private List<MusicLinkResponse> mapMusicLinks(Set<PostMusicLink> links) {
         if (links == null) return List.of();
         return links.stream()
                 .map(l -> new MusicLinkResponse(l.getId(), l.getTrackId(), l.getListenCount()))

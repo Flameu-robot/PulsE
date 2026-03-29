@@ -31,5 +31,5 @@ springdoc:
     urls:
       - name: Identity Service
         url: /v3/api-docs/identity-service
-      - name: Product Service
-        url: /v3/api-docs/product-service
+      - name: Feed Service
+        url: /v3/api-docs/feed-service

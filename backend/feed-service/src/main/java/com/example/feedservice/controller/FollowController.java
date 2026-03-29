@@ -13,6 +13,8 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
 
+import static com.example.feedservice.util.PageableUtils.withoutSort;
+
 @RestController
 @RequestMapping("/api/users/{userId}")
 @RequiredArgsConstructor
@@ -51,7 +53,7 @@ public class FollowController {
             @PathVariable Long userId,
             @PageableDefault(size = 20) Pageable pageable) {
 
-        return followService.getFollowers(userId, pageable);
+        return followService.getFollowers(userId,  withoutSort(pageable));
     }
 
     @GetMapping("/following")
@@ -59,7 +61,7 @@ public class FollowController {
             @PathVariable Long userId,
             @PageableDefault(size = 20) Pageable pageable) {
 
-        return followService.getFollowing(userId, pageable);
+        return followService.getFollowing(userId, withoutSort(pageable));
     }
 
     @GetMapping("/follow/counts")

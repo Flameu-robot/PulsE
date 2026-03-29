@@ -11,6 +11,8 @@ import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.web.bind.annotation.*;
 
+import static com.example.feedservice.util.PageableUtils.withoutSort;
+
 @RestController
 @RequiredArgsConstructor
 public class FeedController {
@@ -24,7 +26,7 @@ public class FeedController {
             @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC)
             Pageable pageable) {
 
-        return feedService.getFollowingFeed(userId, pageable);
+        return feedService.getFollowingFeed(userId, withoutSort(pageable));
     }
 
     @GetMapping("/api/feed/explore")
@@ -33,7 +35,7 @@ public class FeedController {
             @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC)
             Pageable pageable) {
 
-        return feedService.getExploreFeed(userId, pageable);
+        return feedService.getExploreFeed(userId, withoutSort(pageable));
     }
 
     @GetMapping("/api/feed/groups")
@@ -42,7 +44,7 @@ public class FeedController {
             @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC)
             Pageable pageable) {
 
-        return feedService.getGroupsFeed(userId, pageable);
+        return feedService.getGroupsFeed(userId, withoutSort(pageable));
     }
 
     @GetMapping("/api/users/{authorId}/posts")
@@ -52,7 +54,7 @@ public class FeedController {
             @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC)
             Pageable pageable) {
 
-        return postService.getUserPosts(authorId, currentUserId, pageable);
+        return postService.getUserPosts(authorId, currentUserId, withoutSort(pageable));
     }
 
     @GetMapping("/api/groups/{groupId}/posts")
@@ -62,6 +64,6 @@ public class FeedController {
             @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC)
             Pageable pageable) {
 
-        return postService.getGroupPosts(groupId, currentUserId, pageable);
+        return postService.getGroupPosts(groupId, currentUserId, withoutSort(pageable));
     }
 }
