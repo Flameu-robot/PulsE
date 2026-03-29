@@ -14,5 +14,14 @@ java {
 }
 
 dependencies {
-    api(libs.spring.boot.starter)
+    api(libs.spring.boot.starter.security)
+
+    api("org.springframework.boot:spring-boot-autoconfigure")
+
+    annotationProcessor(libs.spring.boot.configuration.processor)
+
+    compileOnly(libs.jakarta.servlet.api)
+
+    compileOnly(libs.lombok)
+    annotationProcessor(libs.lombok)
 }

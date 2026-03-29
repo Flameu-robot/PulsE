@@ -32,6 +32,10 @@ minio:
   access-key: ${MINIO_ACCESS_KEY:minioadmin}
   secret-key: ${MINIO_SECRET_KEY:minioadmin}
 
+gateway:
+  security:
+    token: "${INTERNAL_SECRET:super-safe-dev-key}"
+
 springdoc:
   api-docs:
     enabled: true
