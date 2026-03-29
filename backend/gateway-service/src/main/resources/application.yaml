@@ -33,3 +33,5 @@ springdoc:
         url: /v3/api-docs/identity-service
       - name: Product Service
         url: /v3/api-docs/product-service
+      - name: Messenger Service
+        url: /v3/api-docs/messenger-service

@@ -24,6 +24,20 @@ spring:
               filters:
                 - RewritePath=/v3/api-docs/identity-service, /v3/api-docs
 
+            # Messenger service
+            - id: messenger-service
+              uri: ${MESSENGER_SERVICE_URL:http://localhost:8082}
+              predicates:
+                - Path=/api/message
+              filters:
+                - StripPrefix=0
+
+            - id: messenger-service-docs
+              uri: ${messenger_SERVICE_URL:http://localhost:8082}
+              predicates:
+                - Path=/v3/api-docs/messenger-service
+              filters:
+                - RewritePath=/v3/api-docs/messenger-service, /v3/api-docs
 jwt:
   secret: ${JWT_SECRET:dev-super-secret-key-that-is-at-least-256-bits-long-for-hmac-sha256-algorithm}
 
