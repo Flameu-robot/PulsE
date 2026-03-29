@@ -42,16 +42,65 @@ class PostControllerTest {
 
     private ObjectMapper objectMapper;
 
-    private final PostResponse sampleResponse = new PostResponse(
-            1L, 1L, "Hello", PostVisibility.PUBLIC,
-            false, List.of(), List.of(), new PostStatsResponse(0, 0, 0, 0),
-            Instant.now(), Instant.now(), false, false
-    );
-
     @BeforeEach
     void setUp() {
         objectMapper = new ObjectMapper();
         objectMapper.findAndRegisterModules();
+    }
+
+    private PostResponse createSamplePostResponse() {
+        return new PostResponse(
+                1L,
+                1L,
+                "Hello",
+                PostVisibility.PUBLIC,
+                false,
+                List.of(),
+                List.of(),
+                List.of(),
+                new PostStatsResponse(0, 0, 0, 0),
+                Instant.now(),
+                Instant.now(),
+                false,
+                false
+        );
+    }
+
+    private PostResponse createPostResponseWithGroups(List<Long> groupIds) {
+        return new PostResponse(
+                1L,
+                1L,
+                "Hello",
+                PostVisibility.PUBLIC,
+                false,
+                List.of(),
+                List.of(),
+                groupIds,
+                new PostStatsResponse(0, 0, 0, 0),
+                Instant.now(),
+                Instant.now(),
+                false,
+                false
+        );
+    }
+
+    private PostDetailResponse createSamplePostDetailResponse() {
+        return new PostDetailResponse(
+                1L,
+                1L,
+                "Hello",
+                PostVisibility.PUBLIC,
+                false,
+                Map.of(),
+                List.of(),
+                List.of(),
+                List.of(),
+                new PostStatsResponse(0, 0, 0, 0),
+                Instant.now(),
+                Instant.now(),
+                false,
+                false
+        );
     }
 
     @Nested
@@ -61,9 +110,15 @@ class PostControllerTest {
         @Test
         @DisplayName("should return 201 on successful creation")
         void shouldReturn201OnSuccess() throws Exception {
-            when(postService.createPost(eq(1L), any())).thenReturn(sampleResponse);
+            when(postService.createPost(eq(1L), any())).thenReturn(createSamplePostResponse());
 
-            var request = new CreatePostRequest("Hello", PostVisibility.PUBLIC, null, null);
+            var request = new CreatePostRequest(
+                    "Hello",
+                    PostVisibility.PUBLIC,
+                    List.of(),
+                    List.of(),
+                    List.of()
+            );
 
             mockMvc.perform(post("/api/posts")
                             .header("X-User-Id", "1")
@@ -75,9 +130,39 @@ class PostControllerTest {
         }
 
         @Test
+        @DisplayName("should return 201 when posting to groups")
+        void shouldReturn201WhenPostingToGroups() throws Exception {
+            var responseWithGroups = createPostResponseWithGroups(List.of(123L, 456L));
+            when(postService.createPost(eq(1L), any())).thenReturn(responseWithGroups);
+
+            var request = new CreatePostRequest(
+                    "Hello",
+                    PostVisibility.PUBLIC,
+                    List.of(),
+                    List.of(),
+                    List.of(123L, 456L)
+            );
+
+            mockMvc.perform(post("/api/posts")
+                            .header("X-User-Id", "1")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(request)))
+                    .andExpect(status().isCreated())
+                    .andExpect(jsonPath("$.groupIds").isArray())
+                    .andExpect(jsonPath("$.groupIds[0]").value(123))
+                    .andExpect(jsonPath("$.groupIds[1]").value(456));
+        }
+
+        @Test
         @DisplayName("should return 422 on blank content")
         void shouldReturn422OnBlankContent() throws Exception {
-            var request = new CreatePostRequest("", PostVisibility.PUBLIC, null, null);
+            var request = new CreatePostRequest(
+                    "",
+                    PostVisibility.PUBLIC,
+                    List.of(),
+                    List.of(),
+                    List.of()
+            );
 
             mockMvc.perform(post("/api/posts")
                             .header("X-User-Id", "1")
@@ -94,17 +179,12 @@ class PostControllerTest {
         @Test
         @DisplayName("should return 200 with post detail")
         void shouldReturn200() throws Exception {
-            var detail = new PostDetailResponse(
-                    1L, 1L, "Hello", PostVisibility.PUBLIC,
-                    false, Map.of(), List.of(), List.of(),
-                    new PostStatsResponse(0, 0, 0, 0),
-                    Instant.now(), Instant.now(), false, false
-            );
-            when(postService.getPostDetail(eq(1L), any())).thenReturn(detail);
+            when(postService.getPostDetail(eq(1L), any())).thenReturn(createSamplePostDetailResponse());
 
             mockMvc.perform(get("/api/posts/1"))
                     .andExpect(status().isOk())
-                    .andExpect(jsonPath("$.id").value(1));
+                    .andExpect(jsonPath("$.id").value(1))
+                    .andExpect(jsonPath("$.groupIds").isArray());
         }
     }
 
@@ -115,7 +195,7 @@ class PostControllerTest {
         @Test
         @DisplayName("should return 200 on successful update")
         void shouldReturn200() throws Exception {
-            when(postService.updatePost(eq(1L), eq(1L), any())).thenReturn(sampleResponse);
+            when(postService.updatePost(eq(1L), eq(1L), any())).thenReturn(createSamplePostResponse());
 
             var request = new UpdatePostRequest("Updated", null, null);
 

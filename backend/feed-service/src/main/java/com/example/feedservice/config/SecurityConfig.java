@@ -44,6 +44,7 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/users/*/followers").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/users/*/following").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/users/*/follow/counts").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/groups/*/posts").permitAll()
 
                         .anyRequest().authenticated()
                 );

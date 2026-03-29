@@ -63,6 +63,9 @@ server:
 app:
   gateway:
     url: ${GATEWAY_URL:http://localhost:8000}
+  services:
+    messaging-url: ${MESSAGING_SERVICE_URL:http://localhost:8083}
+
   kafka:
     topics:
       user-created: user.created

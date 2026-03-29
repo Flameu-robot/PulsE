@@ -13,6 +13,7 @@ public record PostResponse(
         boolean pinned,
         List<AttachmentResponse> attachments,
         List<Long> trackIds,
+        List<Long> groupIds,
         PostStatsResponse stats,
         Instant createdAt,
         Instant updatedAt,

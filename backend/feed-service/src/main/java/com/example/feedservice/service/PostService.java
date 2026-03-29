@@ -1,5 +1,6 @@
 package com.example.feedservice.service;
 
+import com.example.feedservice.client.MessagingServiceClient;
 import com.example.feedservice.dto.request.CreatePostRequest;
 import com.example.feedservice.dto.request.UpdatePostRequest;
 import com.example.feedservice.dto.response.*;
@@ -10,6 +11,7 @@ import com.example.feedservice.entity.PostStats;
 import com.example.feedservice.entity.enums.FollowStatus;
 import com.example.feedservice.entity.enums.PostVisibility;
 import com.example.feedservice.repository.*;
+import exception.feed.GroupPermissionDeniedException;
 import exception.feed.PostAccessDeniedException;
 import exception.feed.PostNotFoundException;
 import lombok.RequiredArgsConstructor;
@@ -31,6 +33,7 @@ public class PostService {
     private final PostLikeRepository likeRepository;
     private final BookmarkRepository bookmarkRepository;
     private final FollowRepository followRepository;
+    private final MessagingServiceClient messagingServiceClient;
 
     @Transactional
     public PostResponse createPost(Long authorId, CreatePostRequest request) {
@@ -40,7 +43,7 @@ public class PostService {
                 .visibility(request.visibility())
                 .build();
 
-        if (request.attachments() != null) {
+        if (!request.attachments().isEmpty()) {
             request.attachments().forEach(req -> {
                 var attachment = PostAttachment.builder()
                         .mediaType(req.mediaType())
@@ -53,11 +56,15 @@ public class PostService {
             });
         }
 
-        if (request.trackIds() != null) {
+        if (!request.trackIds().isEmpty()) {
             request.trackIds().forEach(trackId -> {
                 var link = PostMusicLink.builder().trackId(trackId).build();
                 post.addMusicLink(link);
             });
+        }
+
+        if (!request.groupIds().isEmpty()) {
+            publishToGroups(post, authorId, request.groupIds());
         }
 
         Post saved = postRepository.save(post);
@@ -66,7 +73,9 @@ public class PostService {
         statsRepository.save(stats);
         saved.setStats(stats);
 
-        log.info("Post created: id={}, author={}", saved.getId(), authorId);
+        log.info("Post created: id={}, author={}, groups={}",
+                saved.getId(), authorId, saved.getGroupIds());
+
         return toPostResponse(saved, false, false);
     }
 
@@ -128,6 +137,14 @@ public class PostService {
         return PagedResponse.from(page);
     }
 
+    @Transactional(readOnly = true)
+    public PagedResponse<PostResponse> getGroupPosts(Long groupId, Long currentUserId, Pageable pageable) {
+        Page<PostResponse> page = postRepository.findByGroupId(groupId, pageable)
+                .map(post -> enrichWithUserContext(post, currentUserId));
+
+        return PagedResponse.from(page);
+    }
+
     Post getPostOrThrow(Long postId) {
         return postRepository.findById(postId)
                 .orElseThrow(() -> new PostNotFoundException(postId));
@@ -139,6 +156,18 @@ public class PostService {
         boolean bookmarked = currentUserId != null
                 && bookmarkRepository.existsByUserIdAndPostId(currentUserId, post.getId());
         return toPostResponse(post, liked, bookmarked);
+    }
+
+    private void publishToGroups(Post post, Long authorId, List<Long> groupIds) {
+        List<Long> allowedGroupIds = messagingServiceClient.checkPostPermissions(authorId, groupIds);
+
+        if (allowedGroupIds.size() != groupIds.size()) {
+            var deniedIds = new ArrayList<>(groupIds);
+            deniedIds.removeAll(allowedGroupIds);
+            throw new GroupPermissionDeniedException(deniedIds);
+        }
+
+        allowedGroupIds.forEach(post::addToGroup);
     }
 
     private void checkOwnership(Post post, Long userId) {
@@ -174,6 +203,7 @@ public class PostService {
                 post.isPinned(),
                 mapAttachments(post.getAttachments()),
                 mapTrackIds(post.getMusicLinks()),
+                post.getGroupIds(),
                 mapStats(post.getStats()),
                 post.getCreatedAt(),
                 post.getUpdatedAt(),
@@ -192,6 +222,7 @@ public class PostService {
                 post.getMetadata(),
                 mapAttachments(post.getAttachments()),
                 mapMusicLinks(post.getMusicLinks()),
+                post.getGroupIds(),
                 mapStats(post.getStats()),
                 post.getCreatedAt(),
                 post.getUpdatedAt(),

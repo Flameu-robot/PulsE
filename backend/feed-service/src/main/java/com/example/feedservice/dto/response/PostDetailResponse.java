@@ -15,6 +15,7 @@ public record PostDetailResponse(
         Map<String, Object> metadata,
         List<AttachmentResponse> attachments,
         List<MusicLinkResponse> musicLinks,
+        List<Long> groupIds,
         PostStatsResponse stats,
         Instant createdAt,
         Instant updatedAt,

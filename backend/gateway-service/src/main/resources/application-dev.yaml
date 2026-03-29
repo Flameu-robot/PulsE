@@ -13,9 +13,16 @@ spring:
             - id: feed-service-social
               uri: ${FEED_SERVICE_URL:http://localhost:8082}
               predicates:
-                - Path=/api/users/*/posts,/api/users/*/follow,/api/users/*/follow/**,/api/users/*/followers,/api/users/*/following
+                - Path=/api/users/*/posts,/api/users/*/follow,/api/users/*/follow/**,/api/users/*/followers,/api/users/*/following,
               filters:
                 - StripPrefix=0
+
+            - id: feed-service-groups
+              uri: ${FEED_SERVICE_URL:http://localhost:8082}
+              predicates:
+                  - Path=/api/groups/*/posts,/api/feed/groups
+              filters:
+                  - StripPrefix=0
 
             # Identity service
             - id: identity-service

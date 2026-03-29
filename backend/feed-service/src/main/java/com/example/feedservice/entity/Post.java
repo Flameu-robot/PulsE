@@ -61,6 +61,10 @@ public class Post {
     @OneToOne(mappedBy = "post", cascade = CascadeType.ALL, orphanRemoval = true)
     private PostStats stats;
 
+    @Builder.Default
+    @OneToMany(mappedBy = "post", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<PostGroup> postGroups = new ArrayList<>();
+
     @PrePersist
     protected void onCreate() {
         var now = Instant.now();
@@ -86,5 +90,23 @@ public class Post {
     public void addMusicLink(PostMusicLink link) {
         musicLinks.add(link);
         link.setPost(this);
+    }
+
+    public void addToGroup(Long groupId) {
+        var pg = PostGroup.builder()
+                .post(this)
+                .groupId(groupId)
+                .build();
+        postGroups.add(pg);
+    }
+
+    public boolean isPublishedToGroups() {
+        return !postGroups.isEmpty();
+    }
+
+    public List<Long> getGroupIds() {
+        return postGroups.stream()
+                .map(PostGroup::getGroupId)
+                .toList();
     }
 }

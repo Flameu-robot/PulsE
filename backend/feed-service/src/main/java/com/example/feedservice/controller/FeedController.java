@@ -36,6 +36,15 @@ public class FeedController {
         return feedService.getExploreFeed(userId, pageable);
     }
 
+    @GetMapping("/api/feed/groups")
+    public PagedResponse<PostResponse> getGroupsFeed(
+            @CurrentUserId Long userId,
+            @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC)
+            Pageable pageable) {
+
+        return feedService.getGroupsFeed(userId, pageable);
+    }
+
     @GetMapping("/api/users/{authorId}/posts")
     public PagedResponse<PostResponse> getUserPosts(
             @PathVariable Long authorId,
@@ -44,5 +53,15 @@ public class FeedController {
             Pageable pageable) {
 
         return postService.getUserPosts(authorId, currentUserId, pageable);
+    }
+
+    @GetMapping("/api/groups/{groupId}/posts")
+    public PagedResponse<PostResponse> getGroupPosts(
+            @PathVariable Long groupId,
+            @CurrentUserId Long currentUserId,
+            @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC)
+            Pageable pageable) {
+
+        return postService.getGroupPosts(groupId, currentUserId, pageable);
     }
 }

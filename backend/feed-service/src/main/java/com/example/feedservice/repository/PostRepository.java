@@ -70,4 +70,20 @@ public interface PostRepository extends JpaRepository<Post, Long> {
     @Modifying
     @Query("DELETE FROM Post p WHERE p.authorId = :authorId")
     int deleteAllByAuthorId(@Param("authorId") Long authorId);
+
+    @Query("""
+            SELECT p FROM Post p
+            INNER JOIN p.postGroups pg
+            WHERE pg.groupId = :groupId
+            ORDER BY p.createdAt DESC
+            """)
+    Page<Post> findByGroupId(@Param("groupId") Long groupId, Pageable pageable);
+
+    @Query("""
+            SELECT DISTINCT p FROM Post p
+            INNER JOIN p.postGroups pg
+            WHERE pg.groupId IN :groupIds
+            ORDER BY p.createdAt DESC
+            """)
+    Page<Post> findByGroupIds(@Param("groupIds") Collection<Long> groupIds, Pageable pageable);
 }

@@ -21,9 +21,15 @@ public record CreatePostRequest(
         List<AttachmentRequest> attachments,
 
         @Size(max = 5, message = "Maximum 5 tracks")
-        List<Long> trackIds
+        List<Long> trackIds,
+
+        @Size(max = 10, message = "Maximum 10 groups")
+        List<Long> groupIds
 ) {
     public CreatePostRequest {
         if (visibility == null) visibility = PostVisibility.PUBLIC;
+        if (groupIds == null) groupIds = List.of();
+        if (attachments == null) attachments = List.of();
+        if (trackIds == null) trackIds = List.of();
     }
 }

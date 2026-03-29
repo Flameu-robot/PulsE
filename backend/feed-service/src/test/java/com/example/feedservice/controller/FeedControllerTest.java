@@ -37,11 +37,49 @@ class FeedControllerTest {
     @MockitoBean
     private PostService postService;
 
-    private PagedResponse<PostResponse> samplePage() {
-        var post = new PostResponse(1L, 2L, "Test", PostVisibility.PUBLIC,
-                false, List.of(), List.of(), new PostStatsResponse(0, 0, 0, 0),
-                Instant.now(), Instant.now(), false, false);
+    private PostResponse createSamplePostResponse(Long id, Long authorId) {
+        return new PostResponse(
+                id,
+                authorId,
+                "Test content",
+                PostVisibility.PUBLIC,
+                false,
+                List.of(),
+                List.of(),
+                List.of(),
+                new PostStatsResponse(0, 0, 0, 0),
+                Instant.now(),
+                Instant.now(),
+                false,
+                false
+        );
+    }
+
+    private PostResponse createPostResponseWithGroup(Long id, Long authorId, Long groupId) {
+        return new PostResponse(
+                id,
+                authorId,
+                "Test content",
+                PostVisibility.PUBLIC,
+                false,
+                List.of(),
+                List.of(),
+                List.of(groupId),
+                new PostStatsResponse(0, 0, 0, 0),
+                Instant.now(),
+                Instant.now(),
+                false,
+                false
+        );
+    }
+
+    private PagedResponse<PostResponse> createSamplePage() {
+        var post = createSamplePostResponse(1L, 2L);
         return new PagedResponse<>(List.of(post), 0, 20, 1, 1, true);
+    }
+
+    private PagedResponse<PostResponse> createEmptyPage() {
+        return new PagedResponse<>(List.of(), 0, 20, 0, 0, true);
     }
 
     @Nested
@@ -51,13 +89,25 @@ class FeedControllerTest {
         @Test
         @DisplayName("should return 200 with feed for authenticated user")
         void shouldReturn200() throws Exception {
-            when(feedService.getFollowingFeed(eq(1L), any())).thenReturn(samplePage());
+            when(feedService.getFollowingFeed(eq(1L), any())).thenReturn(createSamplePage());
 
             mockMvc.perform(get("/api/feed/following")
                             .header("X-User-Id", "1"))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.content").isArray())
                     .andExpect(jsonPath("$.content[0].id").value(1));
+        }
+
+        @Test
+        @DisplayName("should return empty page when no followees")
+        void shouldReturnEmptyWhenNoFollowees() throws Exception {
+            when(feedService.getFollowingFeed(eq(1L), any())).thenReturn(createEmptyPage());
+
+            mockMvc.perform(get("/api/feed/following")
+                            .header("X-User-Id", "1"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.content").isEmpty())
+                    .andExpect(jsonPath("$.totalElements").value(0));
         }
     }
 
@@ -68,11 +118,52 @@ class FeedControllerTest {
         @Test
         @DisplayName("should return 200 for anonymous user")
         void shouldReturn200Anonymous() throws Exception {
-            when(feedService.getExploreFeed(any(), any())).thenReturn(samplePage());
+            when(feedService.getExploreFeed(any(), any())).thenReturn(createSamplePage());
 
             mockMvc.perform(get("/api/feed/explore"))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.totalElements").value(1));
+        }
+
+        @Test
+        @DisplayName("should return 200 for authenticated user")
+        void shouldReturn200Authenticated() throws Exception {
+            when(feedService.getExploreFeed(eq(1L), any())).thenReturn(createSamplePage());
+
+            mockMvc.perform(get("/api/feed/explore")
+                            .header("X-User-Id", "1"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.content").isArray());
+        }
+    }
+
+    @Nested
+    @DisplayName("GET /api/feed/groups")
+    class GroupsFeed {
+
+        @Test
+        @DisplayName("should return 200 with posts from user groups")
+        void shouldReturn200() throws Exception {
+            var postWithGroup = createPostResponseWithGroup(1L, 2L, 123L);
+            var page = new PagedResponse<>(List.of(postWithGroup), 0, 20, 1, 1, true);
+            when(feedService.getGroupsFeed(eq(1L), any())).thenReturn(page);
+
+            mockMvc.perform(get("/api/feed/groups")
+                            .header("X-User-Id", "1"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.content").isArray())
+                    .andExpect(jsonPath("$.content[0].groupIds[0]").value(123));
+        }
+
+        @Test
+        @DisplayName("should return empty when user has no groups")
+        void shouldReturnEmptyWhenNoGroups() throws Exception {
+            when(feedService.getGroupsFeed(eq(1L), any())).thenReturn(createEmptyPage());
+
+            mockMvc.perform(get("/api/feed/groups")
+                            .header("X-User-Id", "1"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.content").isEmpty());
         }
     }
 
@@ -83,11 +174,39 @@ class FeedControllerTest {
         @Test
         @DisplayName("should return 200 with user posts")
         void shouldReturn200() throws Exception {
-            when(postService.getUserPosts(eq(42L), any(), any())).thenReturn(samplePage());
+            when(postService.getUserPosts(eq(42L), any(), any())).thenReturn(createSamplePage());
 
             mockMvc.perform(get("/api/users/42/posts"))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.content").isArray());
+        }
+    }
+
+    @Nested
+    @DisplayName("GET /api/groups/{groupId}/posts")
+    class GroupPosts {
+
+        @Test
+        @DisplayName("should return 200 with group posts")
+        void shouldReturn200() throws Exception {
+            var postWithGroup = createPostResponseWithGroup(1L, 2L, 123L);
+            var page = new PagedResponse<>(List.of(postWithGroup), 0, 20, 1, 1, true);
+            when(postService.getGroupPosts(eq(123L), any(), any())).thenReturn(page);
+
+            mockMvc.perform(get("/api/groups/123/posts"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.content").isArray())
+                    .andExpect(jsonPath("$.content[0].id").value(1));
+        }
+
+        @Test
+        @DisplayName("should return empty when group has no posts")
+        void shouldReturnEmptyWhenNoPosts() throws Exception {
+            when(postService.getGroupPosts(eq(123L), any(), any())).thenReturn(createEmptyPage());
+
+            mockMvc.perform(get("/api/groups/123/posts"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.content").isEmpty());
         }
     }
 }

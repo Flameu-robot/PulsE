@@ -1,5 +1,6 @@
 package com.example.feedservice.service;
 
+import com.example.feedservice.client.MessagingServiceClient;
 import com.example.feedservice.dto.response.PagedResponse;
 import com.example.feedservice.dto.response.PostResponse;
 import com.example.feedservice.entity.Post;
@@ -28,6 +29,7 @@ public class FeedService {
     private final PostLikeRepository likeRepository;
     private final BookmarkRepository bookmarkRepository;
     private final PostService postService;
+    private final MessagingServiceClient messagingServiceClient;
 
     @Transactional(readOnly = true)
     public PagedResponse<PostResponse> getFollowingFeed(Long userId, Pageable pageable) {
@@ -49,6 +51,19 @@ public class FeedService {
         Page<Post> posts = postRepository.findPublicPostsSince(since, pageable);
 
         return PagedResponse.from(enrichPage(posts, currentUserId));
+    }
+
+    @Transactional(readOnly = true)
+    public PagedResponse<PostResponse> getGroupsFeed(Long userId, Pageable pageable) {
+        List<Long> userGroupIds = messagingServiceClient.getUserGroupIds(userId);
+
+        if (userGroupIds.isEmpty()) {
+            return PagedResponse.from(Page.empty(pageable));
+        }
+
+        Page<Post> posts = postRepository.findByGroupIds(userGroupIds, pageable);
+
+        return PagedResponse.from(enrichPage(posts, userId));
     }
 
     private Page<PostResponse> enrichPage(Page<Post> posts, Long userId) {

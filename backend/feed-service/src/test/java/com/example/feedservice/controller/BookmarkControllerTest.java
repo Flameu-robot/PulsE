@@ -37,6 +37,24 @@ class BookmarkControllerTest {
     @MockitoBean
     private BookmarkService bookmarkService;
 
+    private PostResponse createSamplePostResponse(Long id, Long authorId) {
+        return new PostResponse(
+                id,
+                authorId,
+                "Test content",
+                PostVisibility.PUBLIC,
+                false,
+                List.of(),
+                List.of(),
+                List.of(),  // groupIds
+                new PostStatsResponse(0, 0, 0, 0),
+                Instant.now(),
+                Instant.now(),
+                true,   // likedByMe
+                true    // bookmarkedByMe
+        );
+    }
+
     @Nested
     @DisplayName("POST /api/posts/{postId}/bookmarks")
     class AddBookmark {
@@ -74,14 +92,25 @@ class BookmarkControllerTest {
     class CheckStatus {
 
         @Test
-        @DisplayName("should return 200 with bookmark status")
-        void shouldReturn200() throws Exception {
+        @DisplayName("should return 200 with bookmark status true")
+        void shouldReturn200WithTrue() throws Exception {
             when(bookmarkService.isBookmarked(1L, 10L)).thenReturn(true);
 
             mockMvc.perform(get("/api/posts/10/bookmarks/status")
                             .header("X-User-Id", "1"))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.bookmarked").value(true));
+        }
+
+        @Test
+        @DisplayName("should return 200 with bookmark status false")
+        void shouldReturn200WithFalse() throws Exception {
+            when(bookmarkService.isBookmarked(1L, 10L)).thenReturn(false);
+
+            mockMvc.perform(get("/api/posts/10/bookmarks/status")
+                            .header("X-User-Id", "1"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.bookmarked").value(false));
         }
     }
 
@@ -92,16 +121,28 @@ class BookmarkControllerTest {
         @Test
         @DisplayName("should return 200 with bookmarked posts")
         void shouldReturn200() throws Exception {
-            var post = new PostResponse(10L, 2L, "Test", PostVisibility.PUBLIC,
-                    false, List.of(), List.of(), new PostStatsResponse(0, 0, 0, 0),
-                    Instant.now(), Instant.now(), true, true);
+            var post = createSamplePostResponse(10L, 2L);
             var page = new PagedResponse<>(List.of(post), 0, 20, 1, 1, true);
             when(bookmarkService.getBookmarkedPosts(eq(1L), any())).thenReturn(page);
 
             mockMvc.perform(get("/api/bookmarks")
                             .header("X-User-Id", "1"))
                     .andExpect(status().isOk())
-                    .andExpect(jsonPath("$.content[0].id").value(10));
+                    .andExpect(jsonPath("$.content[0].id").value(10))
+                    .andExpect(jsonPath("$.content[0].bookmarkedByMe").value(true));
+        }
+
+        @Test
+        @DisplayName("should return empty when no bookmarks")
+        void shouldReturnEmptyWhenNoBookmarks() throws Exception {
+            var emptyPage = new PagedResponse<PostResponse>(List.of(), 0, 20, 0, 0, true);
+            when(bookmarkService.getBookmarkedPosts(eq(1L), any())).thenReturn(emptyPage);
+
+            mockMvc.perform(get("/api/bookmarks")
+                            .header("X-User-Id", "1"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.content").isEmpty())
+                    .andExpect(jsonPath("$.totalElements").value(0));
         }
     }
 }
