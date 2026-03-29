@@ -56,6 +56,10 @@ spring:
           github:
             redirect-uri: "http://localhost:8081/api/auth/oauth2/callback/github"
 
+internal:
+  security:
+    token: "${INTERNAL_SECRET:super-safe-dev-key}"
+
 springdoc:
   api-docs:
     enabled: true

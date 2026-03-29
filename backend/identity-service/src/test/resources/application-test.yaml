@@ -49,6 +49,11 @@ jwt:
   refresh-token:
     expiration: 2592000000
 
+internal:
+  security:
+    header-name: "X-Internal-Secret"
+    token: "test-secret-token"
+
 app:
   oauth2:
     authorized-redirect-uris:

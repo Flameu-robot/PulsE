@@ -15,6 +15,10 @@ server:
   port: 8000
   shutdown: graceful
 
+internal:
+  security:
+    header-name: "${INTERNAL_HEADER:X-PulsE-Internal-Token}"
+
 springdoc:
   api-docs:
     enabled: true

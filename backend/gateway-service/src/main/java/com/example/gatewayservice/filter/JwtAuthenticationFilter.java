@@ -1,14 +1,18 @@
 package com.example.gatewayservice.filter;
 
+import com.example.gatewayservice.dto.RouteRule;
 import com.example.gatewayservice.security.JwtUtils;
 import io.jsonwebtoken.Claims;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cloud.gateway.filter.GatewayFilterChain;
 import org.springframework.cloud.gateway.filter.GlobalFilter;
 import org.springframework.core.Ordered;
+import org.springframework.core.io.buffer.DataBuffer;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.server.reactive.ServerHttpRequest;
 import org.springframework.http.server.reactive.ServerHttpResponse;
 import org.jspecify.annotations.NonNull;
@@ -17,6 +21,7 @@ import org.springframework.util.AntPathMatcher;
 import org.springframework.web.server.ServerWebExchange;
 import reactor.core.publisher.Mono;
 
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 
 @Component
@@ -24,35 +29,41 @@ import java.util.List;
 @RequiredArgsConstructor
 public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
 
+    @Value("${internal.security.header-name:X-Internal-Secret}")
+    private String secretHeaderName;
+
+    @Value("${internal.security.token}")
+    private String secretToken;
+
     private final JwtUtils jwtUtils;
 
     private final AntPathMatcher pathMatcher =
             new AntPathMatcher();
 
     // Список путей, не требующих авторизации
-    private final List<String> openApiEndpoints = List.of(
+    private final List<RouteRule> openApiEndpoints = List.of(
             // Identity-service
-            "/api/auth/register",
-            "/api/auth/login",
-            "/api/auth/refresh",
-            "/api/auth/password/forgot",
-            "/api/auth/password/reset",
-            "/api/auth/webauthn/login",
-            "/api/users/",
+            new RouteRule("POST", "/api/auth/register"),
+            new RouteRule("POST", "/api/auth/login"),
+            new RouteRule("POST", "/api/auth/refresh"),
+            new RouteRule("POST", "/api/auth/password/forgot"),
+            new RouteRule("POST", "/api/auth/password/reset"),
+            new RouteRule("POST", "/api/auth/webauthn/login"),
+            new RouteRule("GET", "/api/users/{id:\\d+}"),
 
-            "/api/auth/oauth2/",
-            "/oauth2/",
+            new RouteRule(null, "/api/auth/oauth2/**"),
+            new RouteRule(null, "/oauth2/**"),
 
             // Feed-service
             "/api/posts/*/comments",
             "/api/comments/*/replies",
 
             // Swagger
-            "/swagger-ui.html",
-            "/swagger-ui/**",
-            "/v3/api-docs/**",
-            "/v3/api-docs",
-            "/webjars/**"
+            new RouteRule(null, "/swagger-ui.html"),
+            new RouteRule(null, "/swagger-ui/**"),
+            new RouteRule(null, "/v3/api-docs/**"),
+            new RouteRule(null, "/v3/api-docs"),
+            new RouteRule(null, "/webjars/**")
     );
 
     @SuppressWarnings("NullableProblems")
@@ -61,65 +72,85 @@ public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
 
         ServerHttpRequest request = exchange.getRequest();
         String path = request.getPath().value();
+        String method = request.getMethod().name();
 
-        // Очистка заголовков
-        ServerHttpRequest sanitizedRequest = request.mutate()
+        // 1. Очистка входящих хедеров (безопасность)
+        ServerHttpRequest.Builder requestBuilder = request.mutate()
                 .headers(h -> {
                     h.remove("X-User-Id");
                     h.remove("X-User-Role");
                     h.remove("X-User-Sub");
-                })
-                .build();
-        exchange = exchange.mutate().request(sanitizedRequest).build();
+                    h.remove("X-Anonymous-Request");
+                    h.remove(HttpHeaders.AUTHORIZATION);
+                    h.remove(secretHeaderName);
+                });
+
+        requestBuilder.header(secretHeaderName, secretToken);
 
         // Пропуск открытых эндпоинтов
-        if (isOpenEndpoint(path)) {
-            return chain.filter(exchange);
+        if (isOpenEndpoint(path, method)) {
+            // Маркер отсутствия аутентификации
+            requestBuilder.header("X-Anonymous-Request", "true");
+            return chain.filter(exchange.mutate().request(requestBuilder.build()).build());
         }
 
-        // Получение заголовка
+        // Извлечение хедеров из запроса
         String authHeader = request.getHeaders().getFirst(HttpHeaders.AUTHORIZATION);
 
-        if (authHeader == null || authHeader.isEmpty()) {
-            return onError(exchange, "Authorization header is missing");
+        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+            return onError(exchange, "Missing or invalid Authorization header");
         }
 
-        // Формат Bearer
-        if (!authHeader.startsWith("Bearer ")) {
-            return onError(exchange, "Invalid Authorization header format");
-        }
-
-        // Удаление Bearer
         String token = authHeader.substring(7);
-
-        // Валидация токена
         if (!jwtUtils.validateToken(token)) {
             return onError(exchange, "Invalid JWT Token");
         }
 
-        // Парсинг клеймов в хедеры
+        // Подстановка в хедеры
         Claims claims = jwtUtils.getAllClaimsFromToken(token);
+        Object userId = claims.get("userId");
+        Object role = claims.get("role");
+        String subject = claims.getSubject();
 
-        ServerHttpRequest modifiedRequest = exchange.getRequest().mutate()
-                .header("X-User-Id", String.valueOf(claims.get("userId")))
-                .header("X-User-Role", String.valueOf(claims.get("role")))
-                .header("X-User-Sub", claims.getSubject())
-                .build();
+        if (userId == null || role == null || subject == null) {
+            return onError(exchange, "JWT is missing required claims");
+        }
 
-        return chain.filter(exchange.mutate().request(modifiedRequest).build());
+        requestBuilder.header("X-User-Id", String.valueOf(userId));
+        requestBuilder.header("X-User-Role", String.valueOf(role));
+        requestBuilder.header("X-User-Sub", subject);
+
+        return chain.filter(exchange.mutate().request(requestBuilder.build()).build());
     }
 
-    private boolean isOpenEndpoint(String path) {
+    private boolean isOpenEndpoint(String path, String method) {
+        if (isPublicUserProfile(path, method)) {
+            return true;
+        }
+
         return openApiEndpoints.stream()
-                .anyMatch(pattern -> pathMatcher.match(pattern, path));
+                .anyMatch(rule ->
+                        pathMatcher.match(rule.pattern(), path)
+                                && (rule.method() == null || rule.method().equalsIgnoreCase(method))
+                );
+    }
+
+    private boolean isPublicUserProfile(String path, String method) {
+        return "GET".equalsIgnoreCase(method)
+                && path.matches("^/api/users/\\d+$");
     }
 
     @SuppressWarnings("NullableProblems")
     private Mono<Void> onError(ServerWebExchange exchange, String err) {
         ServerHttpResponse response = exchange.getResponse();
         response.setStatusCode(HttpStatus.UNAUTHORIZED);
+        response.getHeaders().setContentType(MediaType.APPLICATION_JSON);
         log.error("Security Error: {}", err);
-        return response.setComplete();
+
+        String body = "{\"error\": \"" + err + "\"}";
+        DataBuffer buffer = response.bufferFactory()
+                .wrap(body.getBytes(StandardCharsets.UTF_8));
+        return response.writeWith(Mono.just(buffer));
     }
 
     @Override
