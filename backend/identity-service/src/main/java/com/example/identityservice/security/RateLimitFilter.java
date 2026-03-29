@@ -20,7 +20,7 @@ public class RateLimitFilter extends OncePerRequestFilter {
 
     private final RateLimitService rateLimitService;
 
-    // ограничение запросов на конкретное время {запросы, время}
+    // ограничение запросов на конкретное время (запросы, время)
     private static final Map<String, int[]> RATE_LIMITS = Map.of(
             "/api/auth/login",           new int[]{10, 60},
             "/api/auth/register",        new int[]{5,  60},
@@ -72,7 +72,7 @@ public class RateLimitFilter extends OncePerRequestFilter {
                 return entry.getValue();
             }
         }
-        return null;
+        return new int[0];
     }
 
     private String getClientIp(HttpServletRequest request) {

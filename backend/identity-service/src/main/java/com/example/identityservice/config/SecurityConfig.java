@@ -1,7 +1,12 @@
 package com.example.identityservice.config;
 
-import com.example.identityservice.security.*;
+import com.example.identityservice.security.OAuth2AuthenticationFailureHandler;
+import com.example.identityservice.security.OAuth2AuthenticationSuccessHandler;
+import com.example.identityservice.security.RateLimitFilter;
+import com.example.shared.security.GatewayHeaderAuthFilter;
 import jakarta.servlet.http.HttpServletResponse;
+import lombok.RequiredArgsConstructor;
+import lombok.SneakyThrows;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -16,46 +21,44 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
-import org.springframework.web.cors.CorsConfiguration;
-import org.springframework.web.cors.CorsConfigurationSource;
-import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
-
-import java.util.List;
 
 @Configuration
 @EnableWebSecurity
 @EnableMethodSecurity
+@RequiredArgsConstructor
 public class SecurityConfig {
 
-    private final JwtAuthenticationFilter jwtAuthFilter;
+    @SuppressWarnings("SpringJavaInjectionPointsAutowiringInspection") // бин создается из shared
     private final GatewayHeaderAuthFilter gatewayHeaderAuthFilter;
     private final RateLimitFilter rateLimitFilter;
     private final OAuth2AuthenticationSuccessHandler oAuth2SuccessHandler;
     private final OAuth2AuthenticationFailureHandler oAuth2FailureHandler;
 
-    public SecurityConfig(
-            JwtAuthenticationFilter jwtAuthFilter,
-            GatewayHeaderAuthFilter gatewayHeaderAuthFilter,
-            RateLimitFilter rateLimitFilter,
-            OAuth2AuthenticationSuccessHandler oAuth2SuccessHandler,
-            OAuth2AuthenticationFailureHandler oAuth2FailureHandler
-    ) {
-        this.jwtAuthFilter = jwtAuthFilter;
-        this.gatewayHeaderAuthFilter = gatewayHeaderAuthFilter;
-        this.rateLimitFilter = rateLimitFilter;
-        this.oAuth2SuccessHandler = oAuth2SuccessHandler;
-        this.oAuth2FailureHandler = oAuth2FailureHandler;
-    }
-
     @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+    @SneakyThrows
+    public SecurityFilterChain securityFilterChain(HttpSecurity http) {
         http
                 .csrf(AbstractHttpConfigurer::disable)
-                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
+                .cors(AbstractHttpConfigurer::disable)
                 .sessionManagement(session ->
                         session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
                 )
                 .authorizeHttpRequests(auth -> auth
+                        // Прямой доступ минуя Gateway
+                        .requestMatchers("/actuator/health/**").permitAll()
+                        .requestMatchers(
+                                "/swagger-ui/**",
+                                "/v3/api-docs/**",
+                                "/swagger-ui.html"
+                        ).permitAll()
+
+                        // OAuth2
+                        .requestMatchers(
+                                "/api/auth/oauth2/**",
+                                "/oauth2/**"
+                        ).permitAll()
+
+                        // Открытые эндпоинты
                         .requestMatchers(
                                 "/api/auth/register",
                                 "/api/auth/login",
@@ -64,18 +67,9 @@ public class SecurityConfig {
                                 "/api/auth/password/reset",
                                 "/api/auth/webauthn/login/**"
                         ).permitAll()
-                        .requestMatchers(
-                                "/api/auth/oauth2/**",
-                                "/oauth2/**"
-                        ).permitAll()
-                        .requestMatchers("/api/users/me").authenticated()
                         .requestMatchers(HttpMethod.GET, "/api/users/{id}").permitAll()
-                        .requestMatchers(
-                                "/swagger-ui/**",
-                                "/v3/api-docs/**",
-                                "/swagger-ui.html"
-                        ).permitAll()
-                        .requestMatchers("/actuator/health/**").permitAll()
+
+                        // Всё остальное с аутентификацией
                         .anyRequest().authenticated()
                 )
                 .oauth2Login(oauth2 -> oauth2
@@ -89,7 +83,7 @@ public class SecurityConfig {
                         .failureHandler(oAuth2FailureHandler)
                 )
                 .exceptionHandling(exceptions -> exceptions
-                        .authenticationEntryPoint((request, response, authException) -> {
+                        .authenticationEntryPoint((_, response, _) -> {
                             response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
                             response.setContentType("application/json");
                             response.getWriter().write(
@@ -98,24 +92,9 @@ public class SecurityConfig {
                         })
                 )
                 .addFilterBefore(rateLimitFilter, UsernamePasswordAuthenticationFilter.class)
-                .addFilterBefore(gatewayHeaderAuthFilter, UsernamePasswordAuthenticationFilter.class)
-                .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
+                .addFilterBefore(gatewayHeaderAuthFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
-    }
-
-    @Bean
-    public CorsConfigurationSource corsConfigurationSource() {
-        CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOrigins(List.of("*"));
-        configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
-        configuration.setAllowedHeaders(List.of("*"));
-        configuration.setExposedHeaders(List.of("Authorization"));
-        configuration.setAllowCredentials(false);
-
-        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
-        source.registerCorsConfiguration("/**", configuration);
-        return source;
     }
 
     @Bean
@@ -124,9 +103,9 @@ public class SecurityConfig {
     }
 
     @Bean
+    @SneakyThrows
     public AuthenticationManager authenticationManager(
-            AuthenticationConfiguration config
-    ) throws Exception {
+            AuthenticationConfiguration config) {
         return config.getAuthenticationManager();
     }
 }

@@ -71,7 +71,7 @@ server:
   port: 8081
   shutdown: graceful
 
-internal:
+gateway:
   security:
     header-name: "${INTERNAL_HEADER:X-PulsE-Internal-Token}"
 
