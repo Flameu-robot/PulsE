@@ -97,3 +97,16 @@ springdoc:
     path: /v3/api-docs
   swagger-ui:
     enabled: true
+    path: /swagger-ui.html
+    doc-expansion: list
+    try-it-out-enabled: true
+    display-request-duration: true
+    filter: true
+    operations-sorter: method
+    tags-sorter: alpha
+    default-models-expand-depth: 1
+    syntax-highlight:
+      activated: true
+      theme: monokai
+  default-produces-media-type: application/json
+  default-consumes-media-type: application/json

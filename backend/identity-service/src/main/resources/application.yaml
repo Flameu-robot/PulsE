@@ -125,3 +125,10 @@ springdoc:
     path: /v3/api-docs
   swagger-ui:
     enabled: true
+    path: /swagger-ui.html
+    doc-expansion: list
+    try-it-out-enabled: true
+    display-request-duration: true
+    filter: true
+    operations-sorter: method
+    tags-sorter: alpha

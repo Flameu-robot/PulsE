@@ -24,13 +24,44 @@ public class OpenApiConfig {
                 .info(new Info()
                         .title("Identity Service API")
                         .version("1.0")
-                        .description("Authentication, authorization and user management")
-                )
-
+                        .description("""
+                                ## Сервис аутентификации и пользователей
+                                
+                                ### Быстрый старт:
+                                1. Зарегистрируйся: `POST /api/auth/register`
+                                2. Или войди: `POST /api/auth/login`
+                                3. Скопируй `accessToken` из ответа
+                                4. Нажми **Authorize** 🔓 и вставь токен
+                                
+                                ### Тестовые данные:
+                                - **email**: `test@example.com`
+                                - **password**: `Password123!`
+                                - **userId**: `1`, `2`
+                                
+                                ### Время жизни токенов:
+                                - **accessToken**: 15 минут
+                                - **refreshToken**: 30 дней
+                                
+                                ### Эндпоинты БЕЗ авторизации:
+                                - `POST /api/auth/register` — регистрация
+                                - `POST /api/auth/login` — вход
+                                - `POST /api/auth/refresh` — обновление токена
+                                - `POST /api/auth/password/forgot` — забыл пароль
+                                - `POST /api/auth/password/reset` — сброс пароля
+                                - `GET /api/users/{id}` — публичный профиль
+                                - `POST /api/auth/webauthn/login/*` — вход по ключу
+                                
+                                ### Частые ошибки:
+                                | Код | Причина |
+                                |-----|---------|
+                                | 401 | Токен истёк или невалидный |
+                                | 403 | Нет прав |
+                                | 404 | Пользователь не найден |
+                                | 409 | Email уже занят |
+                                | 422 | Неверный код подтверждения |
+                                """))
                 .servers(List.of(
-                        new Server()
-                                .url(gatewayUrl)
-                                .description("Gateway Server")
+                        new Server().url(gatewayUrl).description("Gateway")
                 ))
                 .addSecurityItem(new SecurityRequirement().addList("Bearer"))
                 .components(new Components()
@@ -38,7 +69,7 @@ public class OpenApiConfig {
                                 .type(SecurityScheme.Type.HTTP)
                                 .scheme("bearer")
                                 .bearerFormat("JWT")
-                                .description("Вставь access token без префикса 'Bearer '")
+                                .description("Вставь accessToken без префикса 'Bearer '")
                         )
                 );
     }
