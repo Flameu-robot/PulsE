@@ -83,38 +83,45 @@ public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
 
         requestBuilder.header(secretHeaderName, secretToken);
 
-        // Пропуск открытых эндпоинтов
-        if (isOpenEndpoint(path, method)) {
-            // Маркер отсутствия аутентификации
-            requestBuilder.header("X-Anonymous-Request", "true");
-            return chain.filter(exchange.mutate().request(requestBuilder.build()).build());
-        }
+        boolean isOpen = isOpenEndpoint(path, method);
 
-        // Извлечение хедеров из запроса
+        // 2. Извлечение хедера Authorization
         String authHeader = request.getHeaders().getFirst(HttpHeaders.AUTHORIZATION);
 
-        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
-            return onError(exchange, "Missing or invalid Authorization header");
+        // 3. Если токен передан (даже для открытых эндпоинтов) - пытаемся его распарсить
+        if (authHeader != null && authHeader.startsWith("Bearer ")) {
+            String token = authHeader.substring(7);
+
+            if (!jwtUtils.validateToken(token)) {
+                // Если токен невалидный (просрочен/подделан), мы отклоняем запрос
+                return onError(exchange, "Invalid JWT Token");
+            }
+
+            // Токен валиден, извлекаем данные
+            Claims claims = jwtUtils.getAllClaimsFromToken(token);
+            Object userId = claims.get("userId");
+            Object role = claims.get("role");
+            String subject = claims.getSubject();
+
+            if (userId == null || role == null || subject == null) {
+                return onError(exchange, "JWT is missing required claims");
+            }
+
+            // Подставляем данные пользователя в хедеры
+            requestBuilder.header("X-User-Id", String.valueOf(userId));
+            requestBuilder.header("X-User-Role", String.valueOf(role));
+            requestBuilder.header("X-User-Sub", subject);
+
+        } else {
+            // 4. Токена нет
+            if (isOpen) {
+                // Если путь открытый, помечаем запрос как анонимный
+                requestBuilder.header("X-Anonymous-Request", "true");
+            } else {
+                // Если путь закрытый и токена нет — ошибка авторизации
+                return onError(exchange, "Missing or invalid Authorization header");
+            }
         }
-
-        String token = authHeader.substring(7);
-        if (!jwtUtils.validateToken(token)) {
-            return onError(exchange, "Invalid JWT Token");
-        }
-
-        // Подстановка в хедеры
-        Claims claims = jwtUtils.getAllClaimsFromToken(token);
-        Object userId = claims.get("userId");
-        Object role = claims.get("role");
-        String subject = claims.getSubject();
-
-        if (userId == null || role == null || subject == null) {
-            return onError(exchange, "JWT is missing required claims");
-        }
-
-        requestBuilder.header("X-User-Id", String.valueOf(userId));
-        requestBuilder.header("X-User-Role", String.valueOf(role));
-        requestBuilder.header("X-User-Sub", subject);
 
         return chain.filter(exchange.mutate().request(requestBuilder.build()).build());
     }
