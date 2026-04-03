@@ -7,6 +7,10 @@ import jakarta.validation.constraints.Size;
 @Schema(description = "Обновление профиля")
 public record UpdateProfileRequest(
 
+        @Schema(description = "Публичное Имя", example = "ЛОЛОШКА")
+        @Size(max = 100, message = "Отображаемое имя не должно превышать 100 символов")
+        String displayName,
+
         @Schema(description = "О себе", example = "Я сумасшедший")
         @Size(max = 500, message = "Bio must be at most 500 characters")
         String bio,

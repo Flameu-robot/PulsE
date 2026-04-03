@@ -40,20 +40,21 @@ public class UserService {
     public PublicUserResponse getPublicProfile(Long userId) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new UserNotFoundException(userId.toString()));
+        return toPublicUserResponse(user);
+    }
 
-        return new PublicUserResponse(
-                user.getId(),
-                user.getUsername(),
-                user.getAvatarUrl(),
-                user.getBio(),
-                user.getCreatedAt()
-        );
+    public PublicUserResponse getPublicProfileByUsername(String username) {
+        User user = findByUsername(username);
+        return toPublicUserResponse(user);
     }
 
     @Transactional
     public UserResponse updateProfile(String username, UpdateProfileRequest request) {
         User user = findByUsername(username);
 
+        if (request.displayName() != null) {
+            user.setDisplayName(request.displayName());
+        }
         if (request.bio() != null) {
             user.setBio(request.bio());
         }
@@ -65,11 +66,10 @@ public class UserService {
         }
 
         user = userRepository.save(user);
-        log.info("Profile updated for user {}", username);
+        log.info("Profile updated for user '{}'", username);
 
         return toUserResponse(user);
     }
-
 
     @Transactional
     public void deleteAccount(String username) {
@@ -79,7 +79,7 @@ public class UserService {
         verificationRepository.deleteAllByUserId(user.getId());
 
         userRepository.delete(user);
-        log.info("Account deleted for user {}", username);
+        log.info("Account deleted for user '{}'", username);
     }
 
     private User findByUsername(String username) {
@@ -91,6 +91,7 @@ public class UserService {
         return new UserResponse(
                 user.getId(),
                 user.getUsername(),
+                user.getDisplayName(),
                 user.getEmail(),
                 user.getPhone(),
                 user.getRole().name(),
@@ -99,6 +100,17 @@ public class UserService {
                 user.getBio(),
                 user.getCreatedAt(),
                 user.getLastLoginAt()
+        );
+    }
+
+    private PublicUserResponse toPublicUserResponse(User user) {
+        return new PublicUserResponse(
+                user.getId(),
+                user.getUsername(),
+                user.getDisplayName(),
+                user.getAvatarUrl(),
+                user.getBio(),
+                user.getCreatedAt()
         );
     }
 }

@@ -29,18 +29,16 @@ public class UserController {
     public ResponseEntity<UserResponse> getMyProfile(
             @Parameter(hidden = true) @AuthenticationPrincipal UserDetails userDetails
     ) {
-        UserResponse response = userService.getProfile(userDetails.getUsername());
-        return ResponseEntity.ok(response);
+        return ResponseEntity.ok(userService.getProfile(userDetails.getUsername()));
     }
 
-    @Operation(summary = "Обновить мой профиль")
+    @Operation(summary = "Обновить мой профиль (displayName, bio, phone, avatarUrl)")
     @PatchMapping("/me")
     public ResponseEntity<UserResponse> updateMyProfile(
             @Parameter(hidden = true) @AuthenticationPrincipal UserDetails userDetails,
             @Valid @RequestBody UpdateProfileRequest request
     ) {
-        UserResponse response = userService.updateProfile(userDetails.getUsername(), request);
-        return ResponseEntity.ok(response);
+        return ResponseEntity.ok(userService.updateProfile(userDetails.getUsername(), request));
     }
 
     @Operation(summary = "Удалить мой аккаунт")
@@ -52,13 +50,21 @@ public class UserController {
         return ResponseEntity.noContent().build();
     }
 
-    @Operation(summary = "Публичный профиль пользователя (без авторизации)")
+    @Operation(summary = "Публичный профиль по ID")
     @GetMapping("/{id}")
     public ResponseEntity<PublicUserResponse> getPublicProfile(
             @Parameter(description = "ID пользователя", example = "1")
             @PathVariable Long id
     ) {
-        PublicUserResponse response = userService.getPublicProfile(id);
-        return ResponseEntity.ok(response);
+        return ResponseEntity.ok(userService.getPublicProfile(id));
+    }
+
+    @Operation(summary = "Публичный профиль по @username (поиск по тегу)")
+    @GetMapping("/by-username/{username}")
+    public ResponseEntity<PublicUserResponse> getPublicProfileByUsername(
+            @Parameter(description = "Username пользователя (тег)", example = "john_doe")
+            @PathVariable String username
+    ) {
+        return ResponseEntity.ok(userService.getPublicProfileByUsername(username));
     }
 }
