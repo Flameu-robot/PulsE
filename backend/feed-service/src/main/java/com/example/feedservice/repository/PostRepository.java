@@ -86,4 +86,37 @@ public interface PostRepository extends JpaRepository<Post, Long> {
             ORDER BY p.createdAt DESC
             """)
     Page<Post> findByGroupIds(@Param("groupIds") Collection<Long> groupIds, Pageable pageable);
+
+    @Query("""
+        SELECT p FROM Post p
+        JOIN p.stats s
+        WHERE p.authorId IN :preferredAuthorIds
+          AND p.authorId NOT IN :followingIds
+          AND p.visibility = 'PUBLIC'
+          AND p.createdAt > :since
+        ORDER BY (s.likesCount * 3 + s.viewsCount * 1 + s.commentsCount * 2) DESC,
+                 p.createdAt DESC
+        """)
+    Page<Post> findPersonalizedExplorePosts(
+            @Param("preferredAuthorIds") Collection<Long> preferredAuthorIds,
+            @Param("followingIds") Collection<Long> followingIds,
+            @Param("since") Instant since,
+            Pageable pageable
+    );
+
+    @Query("""
+        SELECT p FROM Post p
+        JOIN p.stats s
+        WHERE p.visibility = 'PUBLIC'
+          AND p.createdAt > :since
+          AND p.authorId NOT IN :excludeAuthorIds
+        ORDER BY (s.likesCount * 3 + s.viewsCount * 1 + s.commentsCount * 2) DESC,
+                 p.createdAt DESC
+        """)
+    Page<Post> findTrendingPublicPosts(
+            @Param("since") Instant since,
+            @Param("excludeAuthorIds") Collection<Long> excludeAuthorIds,
+            Pageable pageable
+    );
+
 }

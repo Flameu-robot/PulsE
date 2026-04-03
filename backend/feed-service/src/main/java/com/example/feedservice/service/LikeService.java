@@ -9,6 +9,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -17,6 +18,7 @@ public class LikeService {
     private final PostLikeRepository likeRepository;
     private final PostStatsRepository statsRepository;
     private final PostService postService;
+    private final InteractionService interactionService;
 
     @Transactional
     public void likePost(Long postId, Long userId) {
@@ -34,6 +36,8 @@ public class LikeService {
         likeRepository.save(like);
         statsRepository.incrementLikes(postId);
 
+        interactionService.onLike(userId, post.getAuthorId());
+
         log.debug("Like: user={} → post={}", userId, postId);
     }
 
@@ -41,8 +45,11 @@ public class LikeService {
     public void unlikePost(Long postId, Long userId) {
         likeRepository.findByPostIdAndUserId(postId, userId)
                 .ifPresent(like -> {
+                    Long authorId = like.getPost().getAuthorId();
                     likeRepository.delete(like);
                     statsRepository.decrementLikes(postId);
+
+                    interactionService.onUnlike(userId, authorId);
                     log.debug("Unlike: user={} → post={}", userId, postId);
                 });
     }

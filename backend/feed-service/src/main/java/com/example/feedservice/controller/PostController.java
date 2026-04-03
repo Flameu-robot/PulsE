@@ -68,4 +68,14 @@ public class PostController {
 
         postService.deletePost(postId, userId);
     }
+
+    @Operation(summary = "Отметить пост как просмотренный")
+    @PostMapping("/api/posts/{postId}/view")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void recordView(
+            @PathVariable Long postId,
+            @Parameter(hidden = true) @CurrentUserId Long userId
+    ) {
+        postService.recordView(postId, userId);
+    }
 }

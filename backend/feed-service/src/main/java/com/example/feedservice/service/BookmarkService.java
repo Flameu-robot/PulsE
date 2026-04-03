@@ -21,6 +21,7 @@ public class BookmarkService {
     private final BookmarkRepository bookmarkRepository;
     private final PostLikeRepository likeRepository;
     private final PostService postService;
+    private final InteractionService interactionService;
 
     @Transactional
     public BookmarkResponse addBookmark(Long userId, Long postId) {
@@ -37,14 +38,22 @@ public class BookmarkService {
 
         Bookmark saved = bookmarkRepository.save(bookmark);
 
+        interactionService.onBookmark(userId, post.getAuthorId());
+
         log.debug("Bookmark added: user={}, post={}", userId, postId);
         return new BookmarkResponse(saved.getId(), postId, saved.getCreatedAt());
     }
 
     @Transactional
     public void removeBookmark(Long userId, Long postId) {
-        bookmarkRepository.deleteByUserIdAndPostId(userId, postId);
-        log.debug("Bookmark removed: user={}, post={}", userId, postId);
+        bookmarkRepository.findByUserIdAndPostId(userId, postId)
+                .ifPresent(bookmark -> {
+                    Long authorId = bookmark.getPost().getAuthorId();
+                    bookmarkRepository.delete(bookmark);
+
+                    interactionService.onUnbookmark(userId, authorId);
+                    log.debug("Bookmark removed: user={}, post={}", userId, postId);
+                });
     }
 
     @Transactional(readOnly = true)

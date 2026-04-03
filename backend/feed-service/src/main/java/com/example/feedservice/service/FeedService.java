@@ -15,6 +15,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -30,6 +31,11 @@ public class FeedService {
     private final BookmarkRepository bookmarkRepository;
     private final PostService postService;
     private final MessagingServiceClient messagingServiceClient;
+    private final UserInteractionSummaryRepository interactionSummaryRepository;
+
+    private static final int    PREFERRED_AUTHORS_LIMIT = 50;
+    private static final int    EXPLORE_WINDOW_DAYS     = 14;
+    private static final double PERSONALIZED_THRESHOLD  = 0.5;
 
     @Transactional(readOnly = true)
     public PagedResponse<PostResponse> getFollowingFeed(Long userId, Pageable pageable) {
@@ -47,10 +53,47 @@ public class FeedService {
 
     @Transactional(readOnly = true)
     public PagedResponse<PostResponse> getExploreFeed(Long currentUserId, Pageable pageable) {
-        Instant since = Instant.now().minus(7, ChronoUnit.DAYS);
-        Page<Post> posts = postRepository.findPublicPostsSince(since, pageable);
+        Instant since = Instant.now().minus(EXPLORE_WINDOW_DAYS, ChronoUnit.DAYS);
 
-        return PagedResponse.from(enrichPage(posts, currentUserId));
+        List<Long> followingIds = currentUserId != null
+                ? followRepository.findActiveFolloweeIds(currentUserId)
+                : List.of();
+
+        if (currentUserId == null || !interactionSummaryRepository.existsByUserId(currentUserId)) {
+            log.debug("Explore cold start for userId={}", currentUserId);
+            Page<Post> trending = postRepository.findTrendingPublicPosts(
+                    since,
+                    followingIds.isEmpty() ? List.of(-1L) : followingIds,
+                    pageable
+            );
+            return PagedResponse.from(enrichPage(trending, currentUserId));
+        }
+
+        List<Long> preferredAuthorIds = interactionSummaryRepository
+                .findTopAuthorIdsByUserId(currentUserId, PREFERRED_AUTHORS_LIMIT);
+
+        Page<Post> personalized = postRepository.findPersonalizedExplorePosts(
+                preferredAuthorIds,
+                followingIds.isEmpty() ? List.of(-1L) : followingIds,
+                since,
+                pageable
+        );
+
+        log.debug("Explore personalized: userId={}, preferredAuthors={}, found={}",
+                currentUserId, preferredAuthorIds.size(), personalized.getTotalElements());
+
+        if (isSufficientlyFilled(personalized, pageable)) {
+            return PagedResponse.from(enrichPage(personalized, currentUserId));
+        }
+
+        log.debug("Explore fallback to trending for userId={}", currentUserId);
+        Page<Post> trending = postRepository.findTrendingPublicPosts(
+                since,
+                buildExcludeList(followingIds, preferredAuthorIds),
+                pageable
+        );
+
+        return PagedResponse.from(enrichPage(trending, currentUserId));
     }
 
     @Transactional(readOnly = true)
@@ -62,7 +105,6 @@ public class FeedService {
         }
 
         Page<Post> posts = postRepository.findByGroupIds(userGroupIds, pageable);
-
         return PagedResponse.from(enrichPage(posts, userId));
     }
 
@@ -83,5 +125,17 @@ public class FeedService {
         );
 
         return posts.map(post -> postService.enrichWithUserContext(post, userId));
+    }
+
+    private boolean isSufficientlyFilled(Page<?> page, Pageable pageable) {
+        int requested = pageable.getPageSize();
+        int received  = page.getNumberOfElements();
+        return received >= (int)(requested * PERSONALIZED_THRESHOLD);
+    }
+
+    private List<Long> buildExcludeList(List<Long> followingIds, List<Long> preferredAuthorIds) {
+        var exclude = new ArrayList<>(followingIds);
+        exclude.addAll(preferredAuthorIds);
+        return exclude.isEmpty() ? List.of(-1L) : exclude;
     }
 }

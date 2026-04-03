@@ -53,4 +53,5 @@ public class LikeController {
 
         return Map.of("liked", likeService.isLiked(postId, userId));
     }
+
 }

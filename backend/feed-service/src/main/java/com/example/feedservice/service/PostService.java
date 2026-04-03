@@ -34,6 +34,7 @@ public class PostService {
     private final BookmarkRepository bookmarkRepository;
     private final FollowRepository followRepository;
     private final MessagingServiceClient messagingServiceClient;
+    private final InteractionService interactionService;
 
     @Transactional
     public PostResponse createPost(Long authorId, CreatePostRequest request) {
@@ -258,5 +259,15 @@ public class PostService {
         return new PostStatsResponse(
                 stats.getLikesCount(), stats.getCommentsCount(),
                 stats.getSharesCount(), stats.getViewsCount());
+    }
+
+    @Transactional
+    public void recordView(Long postId, Long userId) {
+        statsRepository.incrementViews(postId);
+
+        if (userId != null) {
+            Post post = getPostOrThrow(postId);
+            interactionService.onView(userId, post.getAuthorId());
+        }
     }
 }
