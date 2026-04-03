@@ -194,6 +194,7 @@ public class AuthService {
         return new UserResponse(
                 user.getId(),
                 user.getUsername(),
+                user.getDisplayName(),
                 user.getEmail(),
                 user.getPhone(),
                 user.getRole().name(),
