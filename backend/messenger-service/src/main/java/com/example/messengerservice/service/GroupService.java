@@ -53,7 +53,15 @@ public class GroupService {
     }
 
     @Transactional
-    public void createGroup(Long ownerId, GroupRequest req) {
+    public void createChat(Long ownerId, GroupRequest request) {
+        switch (request.type()) {
+            case GROUP -> createGroup(ownerId, request);
+            case SERVER -> createServer(ownerId, request.name());
+            default -> throw new IllegalArgumentException("Invalid type: " + request.type());
+        }
+    }
+
+    private Group createGroup(Long ownerId, GroupRequest req) {
         Group group = Group.builder()
                 .name(req.name())
                 .ownerId(ownerId)
@@ -63,8 +71,8 @@ public class GroupService {
 
         Group saved = groupRepository.save(group);
 
-        addMemberToGroup(saved, ownerId);
         channelService.createChannel(saved, "general");
+        addMemberToGroup(saved, ownerId);
 
         if (req.initialMembers() != null) {
             req.initialMembers().stream()
@@ -72,10 +80,11 @@ public class GroupService {
                     .distinct()
                     .forEach(memberId -> addMemberToGroup(saved, memberId));
         }
+
+        return saved;
     }
 
-    @Transactional
-    public Group createServer(Long ownerId, String name) {
+    private Group createServer(Long ownerId, String name) {
         GroupFeatures features = new GroupFeatures();
         features.setRolesEnabled(true); // Кастом роли
 

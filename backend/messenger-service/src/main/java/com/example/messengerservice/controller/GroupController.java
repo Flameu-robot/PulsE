@@ -20,12 +20,12 @@ public class GroupController {
     private final GroupService groupService;
 
     @PostMapping
-    public ResponseEntity<Void> createGroup(
+    public ResponseEntity<Void> createChat(
             @Valid @RequestBody GroupRequest req,
             @AuthenticationPrincipal GatewayPrincipal principal
             ) {
 
-        groupService.createGroup(principal.getUserId(), req);
+        groupService.createChat(principal.getUserId(), req);
 
         return ResponseEntity.noContent().build();
     }
