@@ -1,5 +1,6 @@
 package com.example.messengerservice.service;
 
+import com.example.messengerservice.dto.request.GroupRequest;
 import com.example.messengerservice.entity.enums.GroupType;
 import com.example.messengerservice.entity.groups.Group;
 import com.example.messengerservice.repository.groups.GroupMemberRepository;
@@ -11,6 +12,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.util.List;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -24,50 +26,135 @@ class GroupServiceTest {
     private GroupRepository groupRepository;
     @Mock
     private GroupMemberRepository groupMemberRepository;
+    @Mock
+    private ChannelService channelService;
 
     @InjectMocks
     private GroupService groupService;
 
     @Test
-    @DisplayName("Should correctly sort IDs and find existing personal chat")
-    void getOrCreatePersonalChat_Existing() {
-        Long userA = 10L;
-        Long userB = 5L;
-        String expectedHash = "5:10"; // 5 < 10
-        Group existingGroup = Group.builder().id(1L).dmHashKey(expectedHash).build();
+    @DisplayName("Возвращает существующий чат без создания нового")
+    void getOrCreate_ShouldReturnExisting() {
+        String expectedHash = "5:10";
+        Group existing = Group.builder().id(1L).dmHashKey(expectedHash).build();
+        when(groupRepository.findByDmHashKey(expectedHash)).thenReturn(Optional.of(existing));
 
-        when(groupRepository.findByDmHashKey(expectedHash)).thenReturn(Optional.of(existingGroup));
+        Group result = groupService.getOrCreatePersonalChat(10L, 5L);
 
-        Group result = groupService.getOrCreatePersonalChat(userA, userB);
-
-        assertEquals(existingGroup, result);
+        assertEquals(existing, result);
         verify(groupRepository, never()).save(any());
+        verify(groupRepository, never()).saveAndFlush(any());
     }
 
     @Test
-    @DisplayName("Should create new server with roles enabled")
-    void createServer_Success() {
-        Long ownerId = 1L;
-        String name = "Dev Server";
-        when(groupRepository.save(any())).thenAnswer(i -> i.getArgument(0));
+    @DisplayName("Должен нормализовать хеш чата")
+    void getOrCreate_ShouldBeSymmetric() {
+        String expectedHash = "100:200";
+        Group existing = Group.builder().id(1L).dmHashKey(expectedHash).build();
+        when(groupRepository.findByDmHashKey(expectedHash)).thenReturn(Optional.of(existing));
 
-        Group result = groupService.createServer(ownerId, name);
+        groupService.getOrCreatePersonalChat(100L, 200L);
+        groupService.getOrCreatePersonalChat(200L, 100L);
+
+        verify(groupRepository, times(2)).findByDmHashKey(expectedHash);
+        verify(groupRepository, never()).saveAndFlush(any());
+    }
+
+    @Test
+    @DisplayName("Должен создать чат с каналом и участниками")
+    void getOrCreate_ShouldCreateNewChat() {
+        String expectedHash = "1:2";
+        Group savedGroup = Group.builder()
+                .id(1L)
+                .dmHashKey(expectedHash)
+                .type(GroupType.PERSONAL)
+                .build();
+
+        when(groupRepository.findByDmHashKey(expectedHash)).thenReturn(Optional.empty());
+        when(groupRepository.saveAndFlush(any())).thenReturn(savedGroup);
+        when(groupMemberRepository.existsByGroupAndUserId(any(), any())).thenReturn(false);
+
+        Group result = groupService.getOrCreatePersonalChat(1L, 2L);
 
         assertNotNull(result);
-        assertTrue(result.getFeatures().isRolesEnabled());
-        assertEquals(GroupType.SERVER, result.getType());
+        assertEquals(GroupType.PERSONAL, result.getType());
+        verify(channelService, times(1)).createChannel(savedGroup, "general");
+        verify(groupMemberRepository, times(2)).save(any());
+    }
+
+    @Test
+    @DisplayName("Должен создать группу с каналом и овнером в участниках")
+    void createChat_Group_Success() {
+        Long ownerId = 1L;
+        GroupRequest request = new GroupRequest(GroupType.GROUP, "Test Group", null);
+
+        when(groupRepository.save(any())).thenAnswer(i -> i.getArgument(0));
+        when(groupMemberRepository.existsByGroupAndUserId(any(), any())).thenReturn(false);
+
+        groupService.createChat(ownerId, request);
+
+        verify(groupRepository, times(1)).save(argThat(group ->
+                group.getType() == GroupType.GROUP &&
+                        group.getName().equals("Test Group") &&
+                        group.getOwnerId().equals(ownerId)
+        ));
+        verify(channelService, times(1)).createChannel(any(), eq("general"));
         verify(groupMemberRepository, times(1)).save(any());
     }
 
     @Test
-    void getOrCreatePersonalChat_ShouldBeSymmetric() {
-        Long userA = 100L;
-        Long userB = 200L;
-        String expectedHash = "100:200";
+    @DisplayName("Должен добавить начальных участников")
+    void createChat_Group_ShouldNotDuplicateOwner() {
+        Long ownerId = 1L;
+        GroupRequest request = new GroupRequest(GroupType.GROUP, "Test Group", List.of(1L, 2L, 3L));
 
-        groupService.getOrCreatePersonalChat(userA, userB);
-        groupService.getOrCreatePersonalChat(userB, userA);
+        when(groupRepository.save(any())).thenAnswer(i -> i.getArgument(0));
+        when(groupMemberRepository.existsByGroupAndUserId(any(), any())).thenReturn(false);
 
-        verify(groupRepository, times(2)).findByDmHashKey(expectedHash);
+        groupService.createChat(ownerId, request);
+
+        verify(groupMemberRepository, times(3)).save(any());
+    }
+
+    @Test
+    @DisplayName("Должен убрать дупликаты участников")
+    void createChat_Group_ShouldDeduplicateMembers() {
+        Long ownerId = 1L;
+        GroupRequest request = new GroupRequest(GroupType.GROUP, "Test", List.of(2L, 2L, 3L));
+
+        when(groupRepository.save(any())).thenAnswer(i -> i.getArgument(0));
+        when(groupMemberRepository.existsByGroupAndUserId(any(), any())).thenReturn(false);
+
+        groupService.createChat(ownerId, request);
+
+        verify(groupMemberRepository, times(3)).save(any());
+    }
+
+    @Test
+    @DisplayName("Должен создать сервер с включенными ролями")
+    void createChat_Server_Success() {
+        Long ownerId = 1L;
+        GroupRequest request = new GroupRequest(GroupType.SERVER, "Dev Server", null);
+
+        when(groupRepository.save(any())).thenAnswer(i -> i.getArgument(0));
+        when(groupMemberRepository.existsByGroupAndUserId(any(), any())).thenReturn(false);
+
+        groupService.createChat(ownerId, request);
+
+        verify(groupRepository, times(1)).save(argThat(group ->
+                group.getType() == GroupType.SERVER &&
+                        group.getFeatures().isRolesEnabled() &&
+                        group.getName().equals("Dev Server")
+        ));
+        verify(channelService, times(1)).createChannel(any(), eq("general"));
+    }
+
+    @Test
+    @DisplayName("Должен выкинуть exception с неправильным типом группы")
+    void createChat_ShouldThrowOnPersonalType() {
+        GroupRequest request = new GroupRequest(GroupType.PERSONAL, null, null);
+
+        assertThrows(IllegalArgumentException.class,
+                () -> groupService.createChat(1L, request));
     }
 }
