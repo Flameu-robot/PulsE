@@ -1,6 +1,7 @@
 package com.example.messengerservice.controller;
 
 import com.example.messengerservice.dto.request.MessageRequest;
+import com.example.messengerservice.dto.response.MessageResponse;
 import com.example.messengerservice.service.MessageService;
 import com.example.shared.security.GatewayPrincipal;
 import jakarta.validation.Valid;
@@ -20,12 +21,12 @@ public class MessageController {
     private final MessageService messageService;
 
     @PostMapping
-    public ResponseEntity<Void> sendMessage(
-            @Valid @RequestBody MessageRequest req,
+    public ResponseEntity<MessageResponse> sendMessage(
+            @Valid @RequestBody MessageRequest request,
             @AuthenticationPrincipal GatewayPrincipal principal) {
 
-        messageService.sendMessage(principal.getUserId(), req);
+        MessageResponse response = messageService.sendMessage(principal.getUserId(), request);
 
-        return ResponseEntity.ok().build();
+        return ResponseEntity.ok(response);
     }
 }

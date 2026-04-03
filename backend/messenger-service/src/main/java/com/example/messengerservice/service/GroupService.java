@@ -4,8 +4,6 @@ import com.example.messengerservice.dto.request.GroupRequest;
 import com.example.messengerservice.entity.enums.GroupFeatures;
 import com.example.messengerservice.entity.enums.GroupType;
 import com.example.messengerservice.entity.groups.Group;
-import com.example.messengerservice.entity.groups.GroupMember;
-import com.example.messengerservice.repository.groups.GroupMemberRepository;
 import com.example.messengerservice.repository.groups.GroupRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -19,8 +17,8 @@ import org.springframework.transaction.annotation.Transactional;
 public class GroupService {
 
     private final GroupRepository groupRepository;
-    private final GroupMemberRepository groupMemberRepository;
     private final ChannelService channelService;
+    private final MemberService memberService;
 
     @Transactional
     public Group getOrCreatePersonalChat(Long user1, Long user2) {
@@ -40,12 +38,12 @@ public class GroupService {
                         Group saved = groupRepository.saveAndFlush(chat);
                         channelService.createChannel(saved, "general");
 
-                        addMemberToGroup(saved, user1);
-                        addMemberToGroup(saved, user2);
+                        memberService.addMemberToGroup(saved, user1);
+                        memberService.addMemberToGroup(saved, user2);
 
                         return saved;
                     } catch (DataIntegrityViolationException _) {
-                        // Кто-то создал раньше — просто находим
+                        // Кто-то создал раньше - просто находим
                         return groupRepository.findByDmHashKey(hashKey)
                                 .orElseThrow(() -> new IllegalStateException("Concurrent creation failed"));
                     }
@@ -72,13 +70,13 @@ public class GroupService {
         Group saved = groupRepository.save(group);
 
         channelService.createChannel(saved, "general");
-        addMemberToGroup(saved, ownerId);
+        memberService.addMemberToGroup(saved, ownerId);
 
         if (req.initialMembers() != null) {
             req.initialMembers().stream()
                     .filter(memberId -> !memberId.equals(ownerId))
                     .distinct()
-                    .forEach(memberId -> addMemberToGroup(saved, memberId));
+                    .forEach(memberId -> memberService.addMemberToGroup(saved, memberId));
         }
 
         return saved;
@@ -97,21 +95,8 @@ public class GroupService {
 
         Group saved = groupRepository.save(server);
         channelService.createChannel(saved, "general");
-        addMemberToGroup(saved, ownerId);
+        memberService.addMemberToGroup(saved, ownerId);
 
         return saved;
-    }
-
-    private void addMemberToGroup(Group group, Long userId) {
-        boolean alreadyMember = groupMemberRepository.existsByGroupAndUserId(group, userId);
-        if (alreadyMember) {
-            log.warn("User {} is already a member of group {}", userId, group.getId());
-            return;
-        }
-        GroupMember member = new GroupMember();
-        member.setGroup(group);
-        member.setUserId(userId);
-        member.setPermissions(0L); // Заглушка
-        groupMemberRepository.save(member);
     }
 }
