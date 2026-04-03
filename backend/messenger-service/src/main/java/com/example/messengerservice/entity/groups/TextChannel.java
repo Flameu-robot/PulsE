@@ -1,8 +1,7 @@
 package com.example.messengerservice.entity.groups;
 
 import jakarta.persistence.*;
-import lombok.Getter;
-import lombok.Setter;
+import lombok.*;
 import org.hibernate.annotations.ColumnDefault;
 
 @Entity
@@ -12,6 +11,9 @@ import org.hibernate.annotations.ColumnDefault;
 })
 @Getter
 @Setter
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
 public class TextChannel {
 
     @Id

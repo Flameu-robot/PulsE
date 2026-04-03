@@ -10,6 +10,7 @@ public record MessageRequest(
 ) {
     // Должно быть заполнено только одно из двух полей
     @AssertTrue(message = "Specify either groupId OR targetUserId, not both")
+    @SuppressWarnings("unused")
     public boolean isValidTarget() {
         return (groupId != null && targetUserId == null) ||
                 (groupId == null && targetUserId != null);

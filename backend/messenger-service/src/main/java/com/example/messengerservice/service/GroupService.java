@@ -1,5 +1,6 @@
 package com.example.messengerservice.service;
 
+import com.example.messengerservice.dto.request.GroupRequest;
 import com.example.messengerservice.entity.enums.GroupFeatures;
 import com.example.messengerservice.entity.enums.GroupType;
 import com.example.messengerservice.entity.groups.Group;
@@ -11,8 +12,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.List;
-
 @Service
 @RequiredArgsConstructor
 @Slf4j
@@ -20,6 +19,7 @@ public class GroupService {
 
     private final GroupRepository groupRepository;
     private final GroupMemberRepository groupMemberRepository;
+    private final ChannelService channelService;
 
     @Transactional
     public Group getOrCreatePersonalChat(Long user1, Long user2) {
@@ -36,6 +36,7 @@ public class GroupService {
                             .build();
 
                     Group saved = groupRepository.save(chat);
+                    channelService.createChannel(saved, "general");
 
                     addMemberToGroup(saved, user1);
                     addMemberToGroup(saved, user2);
@@ -45,9 +46,9 @@ public class GroupService {
     }
 
     @Transactional
-    public Group createGroup(Long ownerId, String name, List<Long> initialMembers) {
+    public void createGroup(Long ownerId, GroupRequest req) {
         Group group = Group.builder()
-                .name(name)
+                .name(req.name())
                 .ownerId(ownerId)
                 .type(GroupType.GROUP)
                 .features(new GroupFeatures()) // Группа без фич
@@ -56,12 +57,11 @@ public class GroupService {
         Group saved = groupRepository.save(group);
 
         addMemberToGroup(saved, ownerId);
+        channelService.createChannel(saved, "general");
 
-        if (initialMembers != null) {
-            initialMembers.forEach(memberId -> addMemberToGroup(saved, memberId));
+        if (req.initialMembers() != null) {
+            req.initialMembers().forEach(memberId -> addMemberToGroup(saved, memberId));
         }
-
-        return saved;
     }
 
     @Transactional

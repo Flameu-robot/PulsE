@@ -1,7 +1,7 @@
 package com.example.messengerservice.controller;
 
-import com.example.messengerservice.dto.request.MessageRequest;
-import com.example.messengerservice.service.MessageService;
+import com.example.messengerservice.dto.request.GroupRequest;
+import com.example.messengerservice.service.GroupService;
 import com.example.shared.security.GatewayPrincipal;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -13,19 +13,20 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-@RequestMapping("/api/messages")
+@RequestMapping("/api/group")
 @RequiredArgsConstructor
-public class MessageController {
+public class GroupController {
 
-    private final MessageService messageService;
+    private final GroupService groupService;
 
     @PostMapping
-    public ResponseEntity<Void> sendMessage(
-            @Valid @RequestBody MessageRequest req,
-            @AuthenticationPrincipal GatewayPrincipal principal) {
+    public ResponseEntity<Void> createGroup(
+            @Valid @RequestBody GroupRequest req,
+            @AuthenticationPrincipal GatewayPrincipal principal
+            ) {
 
-        messageService.sendMessage(principal.getUserId(), req);
+        groupService.createGroup(principal.getUserId(), req);
 
-        return ResponseEntity.ok().build();
+        return ResponseEntity.noContent().build();
     }
 }
