@@ -9,6 +9,7 @@ import com.example.messengerservice.repository.groups.GroupMemberRepository;
 import com.example.messengerservice.repository.groups.GroupRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -28,20 +29,26 @@ public class GroupService {
 
         return groupRepository.findByDmHashKey(hashKey)
                 .orElseGet(() -> {
-                    log.info("Creating new personal chat for hash: {}", hashKey);
-                    Group chat = Group.builder()
-                            .type(GroupType.PERSONAL)
-                            .dmHashKey(hashKey)
-                            .features(new GroupFeatures())
-                            .build();
+                    try {
+                        log.info("Creating new personal chat for hash: {}", hashKey);
+                        Group chat = Group.builder()
+                                .type(GroupType.PERSONAL)
+                                .dmHashKey(hashKey)
+                                .features(new GroupFeatures())
+                                .build();
 
-                    Group saved = groupRepository.save(chat);
-                    channelService.createChannel(saved, "general");
+                        Group saved = groupRepository.saveAndFlush(chat);
+                        channelService.createChannel(saved, "general");
 
-                    addMemberToGroup(saved, user1);
-                    addMemberToGroup(saved, user2);
+                        addMemberToGroup(saved, user1);
+                        addMemberToGroup(saved, user2);
 
-                    return saved;
+                        return saved;
+                    } catch (DataIntegrityViolationException _) {
+                        // Кто-то создал раньше — просто находим
+                        return groupRepository.findByDmHashKey(hashKey)
+                                .orElseThrow(() -> new IllegalStateException("Concurrent creation failed"));
+                    }
                 });
     }
 
@@ -60,7 +67,10 @@ public class GroupService {
         channelService.createChannel(saved, "general");
 
         if (req.initialMembers() != null) {
-            req.initialMembers().forEach(memberId -> addMemberToGroup(saved, memberId));
+            req.initialMembers().stream()
+                    .filter(memberId -> !memberId.equals(ownerId))
+                    .distinct()
+                    .forEach(memberId -> addMemberToGroup(saved, memberId));
         }
     }
 
@@ -77,12 +87,18 @@ public class GroupService {
                 .build();
 
         Group saved = groupRepository.save(server);
+        channelService.createChannel(saved, "general");
         addMemberToGroup(saved, ownerId);
 
         return saved;
     }
 
     private void addMemberToGroup(Group group, Long userId) {
+        boolean alreadyMember = groupMemberRepository.existsByGroupAndUserId(group, userId);
+        if (alreadyMember) {
+            log.warn("User {} is already a member of group {}", userId, group.getId());
+            return;
+        }
         GroupMember member = new GroupMember();
         member.setGroup(group);
         member.setUserId(userId);

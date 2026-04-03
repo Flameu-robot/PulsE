@@ -70,5 +70,6 @@ public class Group {
     private List<GroupMember> members = new ArrayList<>();
 
     @OneToMany(mappedBy = "group", cascade = CascadeType.ALL)
+    @Builder.Default
     private List<TextChannel> channels = new ArrayList<>();
 }
