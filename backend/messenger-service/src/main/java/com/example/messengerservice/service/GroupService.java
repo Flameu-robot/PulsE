@@ -1,6 +1,7 @@
 package com.example.messengerservice.service;
 
 import com.example.messengerservice.dto.request.GroupRequest;
+import com.example.messengerservice.dto.response.GroupResponse;
 import com.example.messengerservice.entity.enums.GroupFeatures;
 import com.example.messengerservice.entity.enums.GroupType;
 import com.example.messengerservice.entity.groups.Group;
@@ -51,12 +52,15 @@ public class GroupService {
     }
 
     @Transactional
-    public void createChat(Long ownerId, GroupRequest request) {
+    public GroupResponse createChat(Long ownerId, GroupRequest request) {
+        Group group;
         switch (request.type()) {
-            case GROUP -> createGroup(ownerId, request);
-            case SERVER -> createServer(ownerId, request.name());
+            case GROUP -> group = createGroup(ownerId, request);
+            case SERVER -> group = createServer(ownerId, request.name());
             default -> throw new IllegalArgumentException("Invalid type: " + request.type());
         }
+
+        return GroupResponse.from(group);
     }
 
     private Group createGroup(Long ownerId, GroupRequest req) {

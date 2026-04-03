@@ -1,6 +1,7 @@
 package com.example.messengerservice.controller;
 
 import com.example.messengerservice.dto.request.GroupRequest;
+import com.example.messengerservice.dto.response.GroupResponse;
 import com.example.messengerservice.service.GroupService;
 import com.example.shared.security.GatewayPrincipal;
 import jakarta.validation.Valid;
@@ -20,13 +21,13 @@ public class GroupController {
     private final GroupService groupService;
 
     @PostMapping
-    public ResponseEntity<Void> createChat(
-            @Valid @RequestBody GroupRequest req,
+    public ResponseEntity<GroupResponse> createChat(
+            @Valid @RequestBody GroupRequest request,
             @AuthenticationPrincipal GatewayPrincipal principal
             ) {
 
-        groupService.createChat(principal.getUserId(), req);
+        GroupResponse response = groupService.createChat(principal.getUserId(), request);
 
-        return ResponseEntity.noContent().build();
+        return ResponseEntity.ok(response);
     }
 }
