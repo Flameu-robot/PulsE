@@ -2,7 +2,7 @@ name: Backend CI
 
 on:
   push:
-    branches: [ "dev", "main", "feature/messenger-service" ]
+    branches: [ "dev", "main" ]
     paths:
       - 'backend/**'
   pull_request:

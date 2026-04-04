@@ -3,7 +3,6 @@ package com.example.messengerservice.service;
 import com.example.messengerservice.dto.request.GroupRequest;
 import com.example.messengerservice.entity.enums.GroupType;
 import com.example.messengerservice.entity.groups.Group;
-import com.example.messengerservice.repository.groups.GroupMemberRepository;
 import com.example.messengerservice.repository.groups.GroupRepository;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -25,7 +24,7 @@ class GroupServiceTest {
     @Mock
     private GroupRepository groupRepository;
     @Mock
-    private GroupMemberRepository groupMemberRepository;
+    private MemberService memberService;
     @Mock
     private ChannelService channelService;
 
@@ -44,6 +43,7 @@ class GroupServiceTest {
         assertEquals(existing, result);
         verify(groupRepository, never()).save(any());
         verify(groupRepository, never()).saveAndFlush(any());
+        verify(memberService, never()).addMemberToGroup(any(), any());
     }
 
     @Test
@@ -72,14 +72,14 @@ class GroupServiceTest {
 
         when(groupRepository.findByDmHashKey(expectedHash)).thenReturn(Optional.empty());
         when(groupRepository.saveAndFlush(any())).thenReturn(savedGroup);
-        when(groupMemberRepository.existsByGroupAndUserId(any(), any())).thenReturn(false);
 
         Group result = groupService.getOrCreatePersonalChat(1L, 2L);
 
         assertNotNull(result);
         assertEquals(GroupType.PERSONAL, result.getType());
         verify(channelService, times(1)).createChannel(savedGroup, "general");
-        verify(groupMemberRepository, times(2)).save(any());
+        verify(memberService, times(1)).addMemberToGroup(savedGroup, 1L);
+        verify(memberService, times(1)).addMemberToGroup(savedGroup, 2L);
     }
 
     @Test
@@ -89,7 +89,6 @@ class GroupServiceTest {
         GroupRequest request = new GroupRequest(GroupType.GROUP, "Test Group", null);
 
         when(groupRepository.save(any())).thenAnswer(i -> i.getArgument(0));
-        when(groupMemberRepository.existsByGroupAndUserId(any(), any())).thenReturn(false);
 
         groupService.createChat(ownerId, request);
 
@@ -99,7 +98,7 @@ class GroupServiceTest {
                         group.getOwnerId().equals(ownerId)
         ));
         verify(channelService, times(1)).createChannel(any(), eq("general"));
-        verify(groupMemberRepository, times(1)).save(any());
+        verify(memberService, times(1)).addMemberToGroup(any(), eq(ownerId));  // ← обновил
     }
 
     @Test
@@ -109,11 +108,10 @@ class GroupServiceTest {
         GroupRequest request = new GroupRequest(GroupType.GROUP, "Test Group", List.of(1L, 2L, 3L));
 
         when(groupRepository.save(any())).thenAnswer(i -> i.getArgument(0));
-        when(groupMemberRepository.existsByGroupAndUserId(any(), any())).thenReturn(false);
 
         groupService.createChat(ownerId, request);
 
-        verify(groupMemberRepository, times(3)).save(any());
+        verify(memberService, times(3)).addMemberToGroup(any(), any());
     }
 
     @Test
@@ -123,11 +121,10 @@ class GroupServiceTest {
         GroupRequest request = new GroupRequest(GroupType.GROUP, "Test", List.of(2L, 2L, 3L));
 
         when(groupRepository.save(any())).thenAnswer(i -> i.getArgument(0));
-        when(groupMemberRepository.existsByGroupAndUserId(any(), any())).thenReturn(false);
 
         groupService.createChat(ownerId, request);
 
-        verify(groupMemberRepository, times(3)).save(any());
+        verify(memberService, times(3)).addMemberToGroup(any(), any());
     }
 
     @Test
@@ -137,7 +134,6 @@ class GroupServiceTest {
         GroupRequest request = new GroupRequest(GroupType.SERVER, "Dev Server", null);
 
         when(groupRepository.save(any())).thenAnswer(i -> i.getArgument(0));
-        when(groupMemberRepository.existsByGroupAndUserId(any(), any())).thenReturn(false);
 
         groupService.createChat(ownerId, request);
 
@@ -147,6 +143,7 @@ class GroupServiceTest {
                         group.getName().equals("Dev Server")
         ));
         verify(channelService, times(1)).createChannel(any(), eq("general"));
+        verify(memberService, times(1)).addMemberToGroup(any(), eq(ownerId));
     }
 
     @Test
