@@ -1,10 +1,7 @@
 package com.example.messengerservice.entity.messages;
 
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
+import lombok.*;
 import org.hibernate.annotations.ColumnDefault;
 import org.hibernate.annotations.CreationTimestamp;
 
@@ -16,6 +13,7 @@ import java.time.OffsetDateTime;
 })
 @Getter
 @Setter
+@Builder
 @NoArgsConstructor
 @AllArgsConstructor
 public class Attachment {
@@ -40,8 +38,12 @@ public class Attachment {
     @Column(name = "minio_object_name",nullable = false)
     private String minioObjectName;
 
+    @Column(name = "is_deleted", nullable = false)
+    @ColumnDefault("false")
+    @Builder.Default
+    private boolean deleted = false;
+
     @CreationTimestamp
     @Column(name = "created_at", updatable = false, nullable = false)
-    @ColumnDefault("now()")
     private OffsetDateTime createdAt;
 }

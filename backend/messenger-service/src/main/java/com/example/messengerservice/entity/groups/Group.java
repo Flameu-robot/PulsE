@@ -55,11 +55,11 @@ public class Group {
 
     @Column(name = "is_deleted", nullable = false)
     @ColumnDefault("false")
+    @Builder.Default
     private boolean deleted = false;
 
     @CreationTimestamp
     @Column(name = "created_at", updatable = false, nullable = false)
-    @ColumnDefault("now()")
     private OffsetDateTime createdAt;
 
     @UpdateTimestamp

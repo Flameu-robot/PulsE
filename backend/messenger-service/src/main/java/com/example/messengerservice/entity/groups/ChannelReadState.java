@@ -1,8 +1,8 @@
 package com.example.messengerservice.entity.groups;
 
 import jakarta.persistence.*;
-import lombok.Getter;
-import lombok.Setter;
+import lombok.*;
+import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
 import java.time.OffsetDateTime;
@@ -19,6 +19,9 @@ import java.time.OffsetDateTime;
         })
 @Getter
 @Setter
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
 public class ChannelReadState {
 
     @Id
@@ -34,6 +37,10 @@ public class ChannelReadState {
 
     @Column(name = "last_read_message_id")
     private Long lastReadMessageId;
+
+    @CreationTimestamp
+    @Column(name = "created_at")
+    private OffsetDateTime createdAt;
 
     @UpdateTimestamp
     @Column(name = "updated_at")

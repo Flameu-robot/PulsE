@@ -2,6 +2,7 @@ package com.example.messengerservice.entity.messages;
 
 import com.example.messengerservice.entity.groups.TextChannel;
 import jakarta.persistence.*;
+import jakarta.validation.constraints.AssertTrue;
 import lombok.*;
 import org.hibernate.annotations.ColumnDefault;
 import org.hibernate.annotations.CreationTimestamp;
@@ -50,15 +51,16 @@ public class Message {
 
     @Column(name = "is_edited", nullable = false)
     @ColumnDefault("false")
+    @Builder.Default
     private boolean edited = false;
 
     @Column(name = "is_deleted", nullable = false)
     @ColumnDefault("false")
+    @Builder.Default
     private boolean deleted = false;
 
     @CreationTimestamp
     @Column(name = "created_at", updatable = false, nullable = false)
-    @ColumnDefault("now()")
     private OffsetDateTime createdAt;
 
     @UpdateTimestamp
@@ -68,4 +70,11 @@ public class Message {
     @OneToMany(mappedBy = "message", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
     private List<Attachment> attachments = new ArrayList<>();
+
+    @AssertTrue(message = "Message must have content or attachments")
+    @SuppressWarnings("unused")
+    private boolean isValid() {
+        return (content != null && !content.isBlank()) ||
+                (attachments != null && !attachments.isEmpty());
+    }
 }

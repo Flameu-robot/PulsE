@@ -20,6 +20,7 @@ import java.time.OffsetDateTime;
         })
 @Getter
 @Setter
+@Builder
 @NoArgsConstructor
 @AllArgsConstructor
 public class GroupMember {
@@ -35,7 +36,9 @@ public class GroupMember {
     @Column(name = "user_id", nullable = false)
     private Long userId;
 
+    // Битовая маска прав: 1 = READ, 2 = WRITE, 4 = DELETE, 8 = ADMIN
     @Column(nullable = false)
+    @Builder.Default
     private long permissions = 0L;
 
     @CreationTimestamp
@@ -44,5 +47,6 @@ public class GroupMember {
 
     @Column(nullable = false)
     @ColumnDefault("false")
+    @Builder.Default
     private boolean muted = false;
 }

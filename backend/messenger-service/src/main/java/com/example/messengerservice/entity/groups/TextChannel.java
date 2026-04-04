@@ -30,9 +30,12 @@ public class TextChannel {
     @Column(length = 200)
     private String topic;
 
-    private Integer position;
+    @ColumnDefault("0")
+    @Builder.Default
+    private Integer position = 0;
 
     @Column(name = "is_deleted", nullable = false)
     @ColumnDefault("false")
+    @Builder.Default
     private boolean deleted = false;
 }
