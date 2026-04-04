@@ -1,0 +1,43 @@
+spring:
+  datasource:
+    driver-class-name: org.postgresql.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    show-sql: true
+
+  flyway:
+    enabled: false
+
+  data:
+    redis:
+      timeout: 2000
+
+  kafka:
+    bootstrap-servers: localhost:9092
+    listener:
+      auto-startup: false
+
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: http://localhost:8081
+
+gateway:
+  security:
+    header-name: "${INTERNAL_HEADER:X-PulsE-Internal-Token}"
+    token: "${INTERNAL_SECRET:super-safe-dev-key}"
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+
+springdoc:
+  api-docs:
+    enabled: false
+  swagger-ui:
+    enabled: false
