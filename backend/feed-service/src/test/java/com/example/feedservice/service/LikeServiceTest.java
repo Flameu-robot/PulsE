@@ -26,6 +26,7 @@ class LikeServiceTest {
     @Mock PostLikeRepository likeRepository;
     @Mock PostStatsRepository statsRepository;
     @Mock PostService postService;
+    @Mock InteractionService interactionService;
     @InjectMocks LikeService likeService;
 
     @Nested
@@ -44,6 +45,7 @@ class LikeServiceTest {
 
             verify(likeRepository).save(any(PostLike.class));
             verify(statsRepository).incrementLikes(1L);
+            verify(interactionService).onLike(5L, 10L);
         }
 
         @Test
@@ -56,6 +58,7 @@ class LikeServiceTest {
 
             verify(likeRepository, never()).save(any());
             verify(statsRepository, never()).incrementLikes(any());
+            verify(interactionService, never()).onLike(any(), any());
         }
     }
 

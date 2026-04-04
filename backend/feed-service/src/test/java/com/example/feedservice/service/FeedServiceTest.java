@@ -35,6 +35,7 @@ class FeedServiceTest {
     @Mock BookmarkRepository bookmarkRepository;
     @Mock PostService postService;
     @Mock MessagingServiceClient messagingServiceClient;
+    @Mock UserInteractionSummaryRepository interactionSummaryRepository;
     @InjectMocks FeedService feedService;
 
     @Nested
@@ -79,33 +80,75 @@ class FeedServiceTest {
     class GetExploreFeed {
 
         @Test
-        @DisplayName("should return public posts")
+        @DisplayName("should return trending posts for user without interaction history (cold start)")
         void shouldReturnPublicPosts() {
+            Long userId = 5L;
             Post post = buildPost(1L, 10L);
-            when(postRepository.findPublicPostsSince(any(), any()))
+
+            when(followRepository.findActiveFolloweeIds(userId)).thenReturn(List.of());
+            when(interactionSummaryRepository.existsByUserId(userId)).thenReturn(false);
+            when(postRepository.findTrendingPublicPosts(any(), anyList(), any(Pageable.class)))
                     .thenReturn(new PageImpl<>(List.of(post)));
 
             var postResponse = createPostResponse(1L, 10L);
-            when(postService.enrichWithUserContext(any(Post.class), any())).thenReturn(postResponse);
+            when(postService.enrichWithUserContext(any(Post.class), eq(userId)))
+                    .thenReturn(postResponse);
 
-            PagedResponse<PostResponse> result = feedService.getExploreFeed(5L, Pageable.ofSize(20));
+            PagedResponse<PostResponse> result = feedService.getExploreFeed(userId, Pageable.ofSize(20));
 
             assertThat(result.content()).hasSize(1);
+            verify(postRepository).findTrendingPublicPosts(any(), anyList(), any());
+            verify(postRepository, never()).findPersonalizedExplorePosts(any(), any(), any(), any());
         }
 
         @Test
-        @DisplayName("should work for anonymous user")
+        @DisplayName("should work for anonymous user (cold start)")
         void shouldWorkForAnonymous() {
             Post post = buildPost(1L, 10L);
-            when(postRepository.findPublicPostsSince(any(), any()))
+
+            when(postRepository.findTrendingPublicPosts(any(), anyList(), any(Pageable.class)))
                     .thenReturn(new PageImpl<>(List.of(post)));
 
             var postResponse = createPostResponse(1L, 10L);
-            when(postService.enrichWithUserContext(any(Post.class), isNull())).thenReturn(postResponse);
+            when(postService.enrichWithUserContext(any(Post.class), isNull()))
+                    .thenReturn(postResponse);
 
             PagedResponse<PostResponse> result = feedService.getExploreFeed(null, Pageable.ofSize(20));
 
             assertThat(result.content()).hasSize(1);
+            verify(postRepository).findTrendingPublicPosts(any(), anyList(), any());
+            verify(interactionSummaryRepository, never()).existsByUserId(any());
+        }
+
+        @Test
+        @DisplayName("should return personalized posts when user has interaction history")
+        void shouldReturnPersonalizedPosts() {
+            Long userId = 5L;
+            List<Post> posts = List.of(
+                    buildPost(1L, 20L), buildPost(2L, 20L), buildPost(3L, 20L),
+                    buildPost(4L, 20L), buildPost(5L, 20L), buildPost(6L, 20L),
+                    buildPost(7L, 20L), buildPost(8L, 20L), buildPost(9L, 20L),
+                    buildPost(10L, 20L), buildPost(11L, 20L)
+            );
+
+            when(followRepository.findActiveFolloweeIds(userId)).thenReturn(List.of(3L));
+            when(interactionSummaryRepository.existsByUserId(userId)).thenReturn(true);
+            when(interactionSummaryRepository.findTopAuthorIdsByUserId(eq(userId), anyInt()))
+                    .thenReturn(List.of(20L, 21L));
+            when(postRepository.findPersonalizedExplorePosts(anyList(), anyList(), any(), any(Pageable.class)))
+                    .thenReturn(new PageImpl<>(posts, Pageable.ofSize(20), posts.size()));
+            when(likeRepository.findByPostIdInAndUserId(any(), eq(userId))).thenReturn(List.of());
+            when(bookmarkRepository.findBookmarkedPostIds(eq(userId), any())).thenReturn(List.of());
+
+            var postResponse = createPostResponse(1L, 20L);
+            when(postService.enrichWithUserContext(any(Post.class), eq(userId)))
+                    .thenReturn(postResponse);
+
+            PagedResponse<PostResponse> result = feedService.getExploreFeed(userId, Pageable.ofSize(20));
+
+            assertThat(result.content()).hasSize(11);
+            verify(postRepository).findPersonalizedExplorePosts(anyList(), anyList(), any(), any());
+            verify(postRepository, never()).findTrendingPublicPosts(any(), anyList(), any());
         }
     }
 
@@ -170,37 +213,19 @@ class FeedServiceTest {
 
     private PostResponse createPostResponse(Long id, Long authorId) {
         return new PostResponse(
-                id,
-                authorId,
-                "Test",
-                PostVisibility.PUBLIC,
-                false,
-                List.of(),
-                List.of(),
-                List.of(),
+                id, authorId, "Test", PostVisibility.PUBLIC,
+                false, List.of(), List.of(), List.of(),
                 new PostStatsResponse(0, 0, 0, 0),
-                Instant.now(),
-                Instant.now(),
-                false,
-                false
+                Instant.now(), Instant.now(), false, false
         );
     }
 
     private PostResponse createPostResponseWithGroup(Long id, Long authorId, Long groupId) {
         return new PostResponse(
-                id,
-                authorId,
-                "Test",
-                PostVisibility.PUBLIC,
-                false,
-                List.of(),
-                List.of(),
-                List.of(groupId),
+                id, authorId, "Test", PostVisibility.PUBLIC,
+                false, List.of(), List.of(), List.of(groupId),
                 new PostStatsResponse(0, 0, 0, 0),
-                Instant.now(),
-                Instant.now(),
-                false,
-                false
+                Instant.now(), Instant.now(), false, false
         );
     }
 }

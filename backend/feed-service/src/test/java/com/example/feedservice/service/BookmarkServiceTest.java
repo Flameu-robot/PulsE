@@ -27,6 +27,7 @@ class BookmarkServiceTest {
     @Mock BookmarkRepository bookmarkRepository;
     @Mock PostLikeRepository likeRepository;
     @Mock PostService postService;
+    @Mock InteractionService interactionService;
     @InjectMocks BookmarkService bookmarkService;
 
     @Nested
@@ -50,6 +51,7 @@ class BookmarkServiceTest {
 
             assertThat(response.postId()).isEqualTo(1L);
             verify(bookmarkRepository).save(any(Bookmark.class));
+            verify(interactionService).onBookmark(5L, 10L);
         }
 
         @Test
@@ -61,6 +63,7 @@ class BookmarkServiceTest {
                     .isInstanceOf(DuplicateBookmarkException.class);
 
             verify(bookmarkRepository, never()).save(any());
+            verify(interactionService, never()).onBookmark(any(), any());
         }
     }
 
