@@ -1,16 +1,14 @@
 package com.example.messengerservice.entity.groups;
 
+import com.example.messengerservice.entity.base.BaseEntity;
 import com.example.messengerservice.entity.enums.GroupFeatures;
 import com.example.messengerservice.entity.enums.GroupType;
 import io.hypersistence.utils.hibernate.type.json.JsonBinaryType;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.ColumnDefault;
-import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.Type;
-import org.hibernate.annotations.UpdateTimestamp;
 
-import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -25,7 +23,7 @@ import java.util.List;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class Group {
+public class Group extends BaseEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -57,14 +55,6 @@ public class Group {
     @ColumnDefault("false")
     @Builder.Default
     private boolean deleted = false;
-
-    @CreationTimestamp
-    @Column(name = "created_at", updatable = false, nullable = false)
-    private OffsetDateTime createdAt;
-
-    @UpdateTimestamp
-    @Column(name = "updated_at")
-    private OffsetDateTime updatedAt;
 
     @OneToMany(mappedBy = "group", cascade = CascadeType.ALL)
     @Builder.Default
