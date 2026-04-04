@@ -57,20 +57,18 @@ spring:
     oauth2:
       resourceserver:
         jwt:
-          # ?????? ?? Identity Service ??? ???????? ???????
           issuer-uri: ${IDENTITY_SERVICE_URL:http://localhost:8081}
 
 server:
   port: 8082
   shutdown: graceful
+  forward-headers-strategy: framework
 
 gateway:
   security:
     header-name: "${INTERNAL_HEADER:X-PulsE-Internal-Token}"
 
 app:
-  gateway:
-    url: ${GATEWAY_URL:http://localhost:8000}
   kafka:
     topics:
       message-sent: message.sent

@@ -70,6 +70,7 @@ spring:
 server:
   port: 8081
   shutdown: graceful
+  forward-headers-strategy: framework
 
 gateway:
   security:
@@ -84,8 +85,6 @@ jwt:
     expiration: 2592000000
 
 app:
-  gateway:
-    url: ${GATEWAY_URL:http://localhost:8000}
   kafka:
     topics:
       user-created: user.created
