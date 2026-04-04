@@ -122,6 +122,21 @@ services:
     networks:
       - pulse-net
 
+  # NGINX для шифрования траффика и сертификатов
+  nginx:
+    image: nginx:alpine
+    container_name: pulse-nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/certs:/etc/nginx/certs:ro
+    extra_hosts:
+      # Хост сеть
+      - "host.docker.internal:host-gateway"
+    restart: unless-stopped
+
   # JAVA-СЕРВИСЫ
 
   gateway-service:
