@@ -10,7 +10,6 @@ import org.springframework.data.repository.query.Param;
 import java.util.Collection;
 
 public interface GroupMemberRepository extends JpaRepository<GroupMember, Long> {
-    boolean existsByGroupAndUserId(Group group, Long userId);
 
     Collection<Object> findAllByGroup(Group chat);
 
