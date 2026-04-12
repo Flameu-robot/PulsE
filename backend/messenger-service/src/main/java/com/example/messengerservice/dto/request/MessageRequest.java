@@ -5,14 +5,15 @@ import jakarta.validation.constraints.AssertTrue;
 
 public record MessageRequest(
         Long groupId,
+        Long channelId,
+
         Long targetUserId,
         @NotBlank String text
 ) {
-    // Должно быть заполнено только одно из двух полей
-    @AssertTrue(message = "Specify either groupId OR targetUserId, not both")
-    @SuppressWarnings("unused")
+    @AssertTrue(message = "For group messages, both groupId and channelId must be provided. For DMs, only targetUserId.")
     public boolean isValidTarget() {
-        return (groupId != null && targetUserId == null) ||
-                (groupId == null && targetUserId != null);
+        boolean isGroup = (groupId != null && channelId != null && targetUserId == null);
+        boolean isDirect = (groupId == null && channelId == null && targetUserId != null);
+        return isGroup || isDirect;
     }
 }

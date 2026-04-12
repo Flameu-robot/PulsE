@@ -27,7 +27,7 @@ public class GroupCreationService {
             Group chat = Group.builder()
                     .type(GroupType.PERSONAL)
                     .dmHashKey(hashKey)
-                    .features(new GroupFeatures())
+                    .features(new GroupFeatures()) // TODO
                     .build();
 
             Group saved = groupRepository.saveAndFlush(chat);
@@ -49,7 +49,7 @@ public class GroupCreationService {
                 .name(req.name())
                 .ownerId(ownerId)
                 .type(GroupType.GROUP)
-                .features(new GroupFeatures()) // Группа без фич
+                .features(new GroupFeatures()) // TODO
                 .build();
 
         Group saved = groupRepository.save(group);

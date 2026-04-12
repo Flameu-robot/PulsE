@@ -24,4 +24,6 @@ public interface GroupMemberRepository extends JpaRepository<GroupMember, Long> 
                      @Param("permissions") Long permissions);
 
     int countByGroupId(Long id);
+
+    boolean existsByUserIdAndGroupId(Long memberId, Long groupId);
 }

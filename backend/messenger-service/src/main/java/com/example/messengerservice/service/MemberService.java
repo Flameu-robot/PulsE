@@ -15,7 +15,7 @@ public class MemberService {
 
     @Transactional
     public void addMemberToGroup(Group group, Long userId) {
-        int inserted = memberRepository.insertIgnore(group.getId(), userId, 0L);
+        int inserted = memberRepository.insertIgnore(group.getId(), userId, 0L); // TODO permissions
         if (inserted == 0) {
             log.debug("User {} already member of group {}", userId, group.getId());
         }

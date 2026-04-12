@@ -6,6 +6,7 @@ import com.example.messengerservice.entity.groups.Group;
 import com.example.messengerservice.repository.groups.GroupRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -21,7 +22,14 @@ public class GroupService {
         String hashKey = (user1 < user2) ? user1 + ":" + user2 : user2 + ":" + user1;
 
         return groupRepository.findByDmHashKey(hashKey)
-                .orElseGet(() -> groupCreationService.createPersonalChat(hashKey, user1, user2));
+                .orElseGet(() -> {
+                    try {
+                        return groupCreationService.createPersonalChat(hashKey, user1, user2);
+                    } catch (DataIntegrityViolationException _) {
+                        return groupRepository.findByDmHashKey(hashKey)
+                                .orElseThrow(() -> new IllegalStateException("Concurrent creation failed"));
+                    }
+                });
     }
 
     public GroupResponse createChat(Long ownerId, GroupRequest request) {
