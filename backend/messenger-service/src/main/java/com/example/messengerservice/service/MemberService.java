@@ -1,7 +1,6 @@
 package com.example.messengerservice.service;
 
 import com.example.messengerservice.entity.groups.Group;
-import com.example.messengerservice.entity.groups.GroupMember;
 import com.example.messengerservice.repository.groups.GroupMemberRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -16,15 +15,9 @@ public class MemberService {
 
     @Transactional
     public void addMemberToGroup(Group group, Long userId) {
-        boolean alreadyMember = memberRepository.existsByGroupAndUserId(group, userId);
-        if (alreadyMember) {
-            log.warn("User {} is already a member of group {}", userId, group.getId());
-            return;
+        int inserted = memberRepository.insertIgnore(group.getId(), userId, 0L);
+        if (inserted == 0) {
+            log.debug("User {} already member of group {}", userId, group.getId());
         }
-        GroupMember member = new GroupMember();
-        member.setGroup(group);
-        member.setUserId(userId);
-        member.setPermissions(0L); // Заглушка
-        memberRepository.save(member);
     }
 }

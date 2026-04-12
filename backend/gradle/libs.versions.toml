@@ -17,6 +17,7 @@ kafkaClients            = "4.2.0"
 springKafka             = "4.0.3"
 hibernate               = "7.2.4.Final"
 jakarta-servlet         = "6.1.0"
+jpa-test                = "4.0.5"
 
 [libraries]
 spring-boot-starter                         = { group = "org.springframework.boot", name = "spring-boot-starter",                         version.ref = "springBoot" }
@@ -59,6 +60,7 @@ mapstruct                                   = { group = "org.mapstruct", name = 
 mapstruct-processor                         = { group = "org.mapstruct", name = "mapstruct-processor",  version.ref = "mapstruct" }
 hypersistence-utils                         = { group = "io.hypersistence", name = "hypersistence-utils-hibernate-71", version.ref = "hypersistence" }
 spring-boot-starter-test                    = { group = "org.springframework.boot",  name = "spring-boot-starter-test",  version.ref = "springBoot" }
+spring-boot-starter-data-jpa-test           = { group = "org.springframework.boot", name = "spring-boot-starter-data-jpa-test", version.ref = "jpa-test"}
 spring-security-test                        = { group = "org.springframework.security", name = "spring-security-test" }
 junit-launcher                              = { group = "org.junit.platform",           name = "junit-platform-launcher" }
 testcontainers-junit                        = { group = "org.testcontainers", name = "junit-jupiter",  version.ref = "testcontainers" }
@@ -106,6 +108,7 @@ testcontainers = [
 
 testing = [
     "spring-boot-starter-test",
+    "spring-boot-starter-data-jpa-test",
     "spring-security-test",
     "spring-kafka-test",
     "reactor-test",
