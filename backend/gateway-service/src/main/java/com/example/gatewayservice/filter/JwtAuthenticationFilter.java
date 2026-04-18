@@ -37,8 +37,7 @@ public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
 
     private final JwtUtils jwtUtils;
 
-    private final AntPathMatcher pathMatcher =
-            new AntPathMatcher();
+    private final AntPathMatcher pathMatcher = new AntPathMatcher();
 
     // Список путей, не требующих авторизации
     private final List<RouteRule> openApiEndpoints = List.of(
@@ -54,6 +53,16 @@ public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
             new RouteRule(null, "/api/auth/oauth2/**"),
             new RouteRule(null, "/oauth2/**"),
 
+            // Feed-service
+            new RouteRule("GET", "/api/posts/**"),
+            new RouteRule("GET", "/api/feed/explore"),
+            new RouteRule("GET", "/api/users/*/posts"),
+            new RouteRule("GET", "/api/users/*/followers"),
+            new RouteRule("GET", "/api/users/*/following"),
+            new RouteRule("GET", "/api/users/*/follow/counts"),
+            new RouteRule("GET", "/api/groups/*/posts"),
+            new RouteRule("GET", "/api/comments/*/replies"),
+
             // Swagger
             new RouteRule(null, "/swagger-ui.html"),
             new RouteRule(null, "/swagger-ui/**"),
@@ -64,8 +73,10 @@ public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
 
     @SuppressWarnings("NullableProblems")
     @Override
-    public @NonNull Mono<Void> filter(@NonNull ServerWebExchange exchange, @NonNull GatewayFilterChain chain) {
-
+    public @NonNull Mono<Void> filter(
+            @NonNull ServerWebExchange exchange,
+            @NonNull GatewayFilterChain chain
+    ) {
         ServerHttpRequest request = exchange.getRequest();
         String path = request.getPath().value();
         String method = request.getMethod().name();
@@ -88,12 +99,12 @@ public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
         // 2. Извлечение хедера Authorization
         String authHeader = request.getHeaders().getFirst(HttpHeaders.AUTHORIZATION);
 
-        // 3. Если токен передан (даже для открытых эндпоинтов) - пытаемся его распарсить
+        // 3. Если токен передан (даже для открытых эндпоинтов) — пытаемся его распарсить
         if (authHeader != null && authHeader.startsWith("Bearer ")) {
             String token = authHeader.substring(7);
 
             if (!jwtUtils.validateToken(token)) {
-                // Если токен невалидный (просрочен/подделан), мы отклоняем запрос
+                // Токен невалидный (просрочен/подделан) — отклоняем запрос
                 return onError(exchange, "Invalid JWT Token");
             }
 
@@ -115,10 +126,10 @@ public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
         } else {
             // 4. Токена нет
             if (isOpen) {
-                // Если путь открытый, помечаем запрос как анонимный
+                // Путь открытый — помечаем запрос как анонимный
                 requestBuilder.header("X-Anonymous-Request", "true");
             } else {
-                // Если путь закрытый и токена нет — ошибка авторизации
+                // Путь закрытый и токена нет — ошибка авторизации
                 return onError(exchange, "Missing or invalid Authorization header");
             }
         }

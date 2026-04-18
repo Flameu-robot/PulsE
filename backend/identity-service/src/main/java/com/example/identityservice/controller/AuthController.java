@@ -8,16 +8,19 @@ import com.example.identityservice.dto.response.AuthResponse;
 import com.example.identityservice.dto.response.UserResponse;
 import com.example.identityservice.service.AuthService;
 import com.example.shared.security.GatewayPrincipal;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/auth")
+@Tag(name = "Аутентификация", description = "Регистрация, вход, токены")
 public class AuthController {
 
     private final AuthService authService;
@@ -26,61 +29,68 @@ public class AuthController {
         this.authService = authService;
     }
 
+    @Operation(summary = "Регистрация нового пользователя")
     @PostMapping("/register")
     public ResponseEntity<AuthResponse> register(
             @Valid @RequestBody RegisterRequest request,
-            HttpServletRequest httpRequest
+            @Parameter(hidden = true) HttpServletRequest httpRequest
     ) {
         AuthResponse response = authService.register(request, httpRequest);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
+    @Operation(summary = "Вход по email и паролю")
     @PostMapping("/login")
     public ResponseEntity<AuthResponse> login(
             @Valid @RequestBody LoginRequest request,
-            HttpServletRequest httpRequest
+            @Parameter(hidden = true) HttpServletRequest httpRequest
     ) {
         AuthResponse response = authService.login(request, httpRequest);
         return ResponseEntity.ok(response);
     }
 
+    @Operation(summary = "Обновить access token по refresh token")
     @PostMapping("/refresh")
     public ResponseEntity<AuthResponse> refresh(
             @Valid @RequestBody RefreshTokenRequest request,
-            HttpServletRequest httpRequest
+            @Parameter(hidden = true) HttpServletRequest httpRequest
     ) {
         AuthResponse response = authService.refresh(request, httpRequest);
         return ResponseEntity.ok(response);
     }
 
+    @Operation(summary = "Выход (инвалидирует refresh token)")
     @PostMapping("/logout")
     public ResponseEntity<Void> logout(
-            @AuthenticationPrincipal GatewayPrincipal principal,
+            @Parameter(hidden = true) @AuthenticationPrincipal GatewayPrincipal principal,
             @Valid @RequestBody RefreshTokenRequest request
     ) {
         authService.logout(principal.getUsername(), request.refreshToken());
         return ResponseEntity.noContent().build();
     }
 
+    @Operation(summary = "Выход со всех устройств")
     @PostMapping("/logout-all")
     public ResponseEntity<Void> logoutAll(
-            @AuthenticationPrincipal GatewayPrincipal principal
+            @Parameter(hidden = true) @AuthenticationPrincipal GatewayPrincipal principal
     ) {
         authService.logoutAll(principal.getUsername());
         return ResponseEntity.noContent().build();
     }
 
+    @Operation(summary = "Получить текущего пользователя")
     @GetMapping("/me")
     public ResponseEntity<UserResponse> getCurrentUser(
-            @AuthenticationPrincipal GatewayPrincipal principal
+            @Parameter(hidden = true) @AuthenticationPrincipal GatewayPrincipal principal
     ) {
         UserResponse response = authService.getCurrentUser(principal.getUsername());
         return ResponseEntity.ok(response);
     }
 
+    @Operation(summary = "Сменить пароль")
     @PostMapping("/password/change")
     public ResponseEntity<Void> changePassword(
-            @AuthenticationPrincipal GatewayPrincipal principal,
+            @Parameter(hidden = true) @AuthenticationPrincipal GatewayPrincipal principal,
             @Valid @RequestBody ChangePasswordRequest request
     ) {
         authService.changePassword(principal.getUsername(), request);

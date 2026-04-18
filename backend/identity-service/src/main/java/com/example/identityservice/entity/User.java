@@ -32,6 +32,9 @@ public class User {
     @Column(nullable = false, length = 50)
     private String username;
 
+    @Column(name = "display_name", length = 100)
+    private String displayName;
+
     @Column
     private String email;
 
