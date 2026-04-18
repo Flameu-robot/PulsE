@@ -57,14 +57,14 @@ spring:
 
             # Messenger service
             - id: messenger-service
-              uri: ${MESSENGER_SERVICE_URL:http://localhost:8082}
+              uri: ${MESSENGER_SERVICE_URL:http://localhost:8083}
               predicates:
                 - Path=/api/messages/**, /api/group/**
               filters:
                 - StripPrefix=0
 
             - id: messenger-service-docs
-              uri: ${messenger_SERVICE_URL:http://localhost:8082}
+              uri: ${messenger_SERVICE_URL:http://localhost:8083}
               predicates:
                 - Path=/v3/api-docs/messenger-service
               filters:
