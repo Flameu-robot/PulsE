@@ -218,6 +218,7 @@ services:
       - SPRING_DATA_REDIS_HOST=redis
       - SPRING_DATA_REDIS_PORT=6379
       - MESSAGING_SERVICE_URL=http://messaging-service:8083
+      - INTERNAL_SECRET=super-safe-dev-key
     deploy:
       resources:
         limits:

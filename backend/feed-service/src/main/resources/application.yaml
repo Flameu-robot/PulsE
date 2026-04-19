@@ -66,6 +66,9 @@ app:
     url: ${GATEWAY_URL:http://localhost:8000}
   services:
     messaging-url: ${MESSAGING_SERVICE_URL:http://localhost:8083}
+  internal-security:
+    header-name: ${INTERNAL_HEADER:X-PulsE-Internal-Token}
+    token: ${INTERNAL_SECRET:super-safe-dev-key}
 
   kafka:
     topics:

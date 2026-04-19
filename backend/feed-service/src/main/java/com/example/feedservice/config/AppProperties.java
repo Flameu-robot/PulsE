@@ -6,13 +6,14 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 public record AppProperties(
         Gateway gateway,
         Services services,
-        Kafka kafka
+        Kafka kafka,
+        InternalSecurity internalSecurity
 ) {
     public record Gateway(String url) {}
 
-    public record Services(
-            String messagingUrl
-    ) {}
+    public record Services(String messagingUrl) {}
+
+    public record InternalSecurity(String headerName, String token) {}
 
     public record Kafka(Topics topics) {
         public record Topics(

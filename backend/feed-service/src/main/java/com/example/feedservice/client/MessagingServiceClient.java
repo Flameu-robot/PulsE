@@ -17,6 +17,10 @@ public class MessagingServiceClient {
     public MessagingServiceClient(AppProperties appProperties) {
         this.restClient = RestClient.builder()
                 .baseUrl(appProperties.services().messagingUrl())
+                .defaultHeader(
+                        appProperties.internalSecurity().headerName(),
+                        appProperties.internalSecurity().token()
+                )
                 .build();
     }
 
@@ -56,8 +60,6 @@ public class MessagingServiceClient {
     }
 
     public record CheckPermissionsRequest(Long userId, List<Long> groupIds) {}
-
     public record CheckPermissionsResponse(List<Long> allowedGroupIds) {}
-
     public record UserGroupsResponse(List<Long> groupIds) {}
 }
