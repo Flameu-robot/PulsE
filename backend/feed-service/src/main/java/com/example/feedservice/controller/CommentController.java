@@ -20,13 +20,14 @@ import static com.example.feedservice.util.PageableUtils.withoutSort;
 
 @RestController
 @RequiredArgsConstructor
+@RequestMapping("/api")
 @Tag(name = "Комментарии", description = "Комментарии к постам")
 public class CommentController {
 
     private final CommentService commentService;
 
     @Operation(summary = "Добавить комментарий к посту")
-    @PostMapping("/api/posts/{postId}/comments")
+    @PostMapping("/posts/{postId}/comments")
     public ResponseEntity<CommentResponse> addComment(
             @Parameter(description = "ID поста", example = "1")
             @PathVariable Long postId,
@@ -39,35 +40,27 @@ public class CommentController {
     }
 
     @Operation(summary = "Получить комментарии к посту")
-    @GetMapping("/api/posts/{postId}/comments")
+    @GetMapping("/posts/{postId}/comments")
     public PagedResponse<CommentResponse> getComments(
             @Parameter(description = "ID поста", example = "1")
             @PathVariable Long postId,
-            @Parameter(description = "Номер страницы (с 0)", example = "0")
-            @RequestParam(defaultValue = "0") int page,
-            @Parameter(description = "Размер страницы", example = "20")
-            @RequestParam(defaultValue = "20") int size,
             @PageableDefault(size = 20) Pageable pageable) {
 
         return commentService.getRootComments(postId, withoutSort(pageable));
     }
 
     @Operation(summary = "Получить ответы на комментарий")
-    @GetMapping("/api/comments/{commentId}/replies")
+    @GetMapping("/comments/{commentId}/replies")
     public PagedResponse<CommentResponse> getReplies(
             @Parameter(description = "ID комментария", example = "1")
             @PathVariable Long commentId,
-            @Parameter(description = "Номер страницы (с 0)", example = "0")
-            @RequestParam(defaultValue = "0") int page,
-            @Parameter(description = "Размер страницы", example = "10")
-            @RequestParam(defaultValue = "10") int size,
             @PageableDefault(size = 10) Pageable pageable) {
 
         return commentService.getReplies(commentId, withoutSort(pageable));
     }
 
     @Operation(summary = "Удалить комментарий")
-    @DeleteMapping("/api/comments/{commentId}")
+    @DeleteMapping("/comments/{commentId}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void deleteComment(
             @Parameter(description = "ID комментария", example = "1")

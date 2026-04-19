@@ -70,7 +70,7 @@ public class PostController {
     }
 
     @Operation(summary = "Отметить пост как просмотренный")
-    @PostMapping("/api/posts/{postId}/view")
+    @PostMapping("{postId}/view")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void recordView(
             @PathVariable Long postId,

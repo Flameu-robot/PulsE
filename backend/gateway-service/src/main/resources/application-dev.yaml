@@ -9,30 +9,32 @@ spring:
             - DedupeResponseHeader=Access-Control-Allow-Credentials Access-Control-Allow-Origin
 
           routes:
-            # Feed service social (обход конфликта /api/users с identity service)
-            - id: feed-service-social
+
+            # feed-service: /api/users/{id}/posts
+            - id: feed-service-user-posts
               uri: ${FEED_SERVICE_URL:http://localhost:8082}
               predicates:
-                - Path=/api/users/*/posts,/api/users/*/follow,/api/users/*/follow/**,/api/users/*/followers,/api/users/*/following,
+                - Path=/api/users/*/posts
               filters:
                 - StripPrefix=0
 
-            - id: feed-service-groups
+            # feed-service: подписки пользователей
+            - id: feed-service-follow
               uri: ${FEED_SERVICE_URL:http://localhost:8082}
               predicates:
-                  - Path=/api/groups/*/posts,/api/feed/groups
-              filters:
-                  - StripPrefix=0
-
-            # Identity service
-            - id: identity-service
-              uri: ${IDENTITY_SERVICE_URL:http://localhost:8081}
-              predicates:
-                - Path=/api/auth/**,/api/users/**
+                - Path=/api/users/*/follow,/api/users/*/follow/**,/api/users/*/followers,/api/users/*/following
               filters:
                 - StripPrefix=0
 
-            # Feed service
+            # feed-service: /api/groups/{id}/posts
+            - id: feed-service-group-posts
+              uri: ${FEED_SERVICE_URL:http://localhost:8082}
+              predicates:
+                - Path=/api/groups/*/posts
+              filters:
+                - StripPrefix=0
+
+            # feed-service: основные маршруты
             - id: feed-service
               uri: ${FEED_SERVICE_URL:http://localhost:8082}
               predicates:
@@ -40,6 +42,7 @@ spring:
               filters:
                 - StripPrefix=0
 
+            # feed-service: документация
             - id: feed-service-docs
               uri: ${FEED_SERVICE_URL:http://localhost:8082}
               predicates:
@@ -47,7 +50,15 @@ spring:
               filters:
                 - RewritePath=/v3/api-docs/feed-service, /v3/api-docs
 
-            # Docs
+            # identity-service: аутентификация и пользователи
+            - id: identity-service
+              uri: ${IDENTITY_SERVICE_URL:http://localhost:8081}
+              predicates:
+                - Path=/api/auth/**,/api/users/**
+              filters:
+                - StripPrefix=0
+
+            # identity-service: документация
             - id: identity-service-docs
               uri: ${IDENTITY_SERVICE_URL:http://localhost:8081}
               predicates:
@@ -55,28 +66,28 @@ spring:
               filters:
                 - RewritePath=/v3/api-docs/identity-service, /v3/api-docs
 
-            # Messenger service
+            # messenger-service: сообщения и группы
             - id: messenger-service
               uri: ${MESSENGER_SERVICE_URL:http://localhost:8083}
               predicates:
-                - Path=/api/messages/**, /api/group/**
+                - Path=/api/messages/**,/api/group/**
               filters:
                 - StripPrefix=0
 
+            # messenger-service: документация
             - id: messenger-service-docs
-              uri: ${messenger_SERVICE_URL:http://localhost:8083}
+              uri: ${MESSENGER_SERVICE_URL:http://localhost:8083}
               predicates:
                 - Path=/v3/api-docs/messenger-service
               filters:
                 - RewritePath=/v3/api-docs/messenger-service, /v3/api-docs
-
 
 jwt:
   secret: ${JWT_SECRET:dev-super-secret-key-that-is-at-least-256-bits-long-for-hmac-sha256-algorithm}
 
 internal:
   security:
-    token: "${INTERNAL_SECRET:super-safe-dev-key}"
+    token: ${INTERNAL_SECRET:super-safe-dev-key}
 
 management:
   endpoints:

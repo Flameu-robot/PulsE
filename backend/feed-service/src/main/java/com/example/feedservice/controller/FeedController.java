@@ -18,6 +18,7 @@ import static com.example.feedservice.util.PageableUtils.withoutSort;
 
 @RestController
 @RequiredArgsConstructor
+@RequestMapping("/api")
 @Tag(name = "Лента", description = "Лента постов")
 public class FeedController {
 
@@ -25,7 +26,7 @@ public class FeedController {
     private final PostService postService;
 
     @Operation(summary = "Лента подписок (посты от тех, на кого подписан)")
-    @GetMapping("/api/feed/following")
+    @GetMapping("/feed/following")
     public PagedResponse<PostResponse> getFollowingFeed(
             @Parameter(hidden = true)
             @CurrentUserId Long userId,
@@ -40,7 +41,7 @@ public class FeedController {
     }
 
     @Operation(summary = "Лента рекомендаций (интересные посты)")
-    @GetMapping("/api/feed/explore")
+    @GetMapping("/feed/explore")
     public PagedResponse<PostResponse> getExploreFeed(
             @Parameter(hidden = true)
             @CurrentUserId Long userId,
@@ -55,7 +56,7 @@ public class FeedController {
     }
 
     @Operation(summary = "Лента групп (посты из групп пользователя)")
-    @GetMapping("/api/feed/groups")
+    @GetMapping("/feed/groups")
     public PagedResponse<PostResponse> getGroupsFeed(
             @Parameter(hidden = true)
             @CurrentUserId Long userId,
@@ -70,7 +71,7 @@ public class FeedController {
     }
 
     @Operation(summary = "Посты конкретного пользователя")
-    @GetMapping("/api/users/{authorId}/posts")
+    @GetMapping("/users/{authorId}/posts")
     public PagedResponse<PostResponse> getUserPosts(
             @Parameter(description = "ID автора", example = "1")
             @PathVariable Long authorId,
@@ -87,7 +88,7 @@ public class FeedController {
     }
 
     @Operation(summary = "Посты конкретной группы")
-    @GetMapping("/api/groups/{groupId}/posts")
+    @GetMapping("/groups/{groupId}/posts")
     public PagedResponse<PostResponse> getGroupPosts(
             @Parameter(description = "ID группы", example = "1")
             @PathVariable Long groupId,

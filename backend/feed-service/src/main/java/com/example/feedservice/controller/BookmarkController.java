@@ -21,13 +21,14 @@ import static com.example.feedservice.util.PageableUtils.withoutSort;
 
 @RestController
 @RequiredArgsConstructor
+@RequestMapping("/api")
 @Tag(name = "Закладки", description = "Сохранение постов в закладки")
 public class BookmarkController {
 
     private final BookmarkService bookmarkService;
 
     @Operation(summary = "Добавить пост в закладки")
-    @PostMapping("/api/posts/{postId}/bookmarks")
+    @PostMapping("/posts/{postId}/bookmarks")
     public ResponseEntity<BookmarkResponse> addBookmark(
             @Parameter(description = "ID поста", example = "1")
             @PathVariable Long postId,
@@ -39,7 +40,7 @@ public class BookmarkController {
     }
 
     @Operation(summary = "Удалить пост из закладок")
-    @DeleteMapping("/api/posts/{postId}/bookmarks")
+    @DeleteMapping("/posts/{postId}/bookmarks")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void removeBookmark(
             @Parameter(description = "ID поста", example = "1")
@@ -51,7 +52,7 @@ public class BookmarkController {
     }
 
     @Operation(summary = "Проверить, добавлен ли пост в закладки")
-    @GetMapping("/api/posts/{postId}/bookmarks/status")
+    @GetMapping("/posts/{postId}/bookmarks/status")
     public Map<String, Boolean> checkBookmark(
             @Parameter(description = "ID поста", example = "1")
             @PathVariable Long postId,
@@ -62,14 +63,10 @@ public class BookmarkController {
     }
 
     @Operation(summary = "Получить мои закладки")
-    @GetMapping("/api/bookmarks")
+    @GetMapping("/bookmarks")
     public PagedResponse<PostResponse> getMyBookmarks(
             @Parameter(hidden = true)
             @CurrentUserId Long userId,
-            @Parameter(description = "Номер страницы (с 0)", example = "0")
-            @RequestParam(defaultValue = "0") int page,
-            @Parameter(description = "Размер страницы", example = "20")
-            @RequestParam(defaultValue = "20") int size,
             @PageableDefault(size = 20) Pageable pageable) {
 
         return bookmarkService.getBookmarkedPosts(userId, withoutSort(pageable));
