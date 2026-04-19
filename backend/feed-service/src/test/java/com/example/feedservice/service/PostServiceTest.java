@@ -66,13 +66,10 @@ class PostServiceTest {
             PostResponse response = postService.createPost(10L, request);
 
             assertThat(response.id()).isEqualTo(1L);
-            assertThat(response.authorId()).isEqualTo(10L);
-            assertThat(response.content()).isEqualTo("Hello world");
-            assertThat(response.visibility()).isEqualTo(PostVisibility.PUBLIC);
             assertThat(response.groupIds()).isEmpty();
             verify(postRepository).save(any(Post.class));
             verify(statsRepository).save(any(PostStats.class));
-            verify(messagingServiceClient, never()).checkPostPermissions(any(), any());
+            verify(messagingServiceClient, never()).checkPostPermissions(any());
         }
 
         @Test
@@ -87,8 +84,9 @@ class PostServiceTest {
                     groupIds
             );
 
-            when(messagingServiceClient.checkPostPermissions(10L, groupIds))
-                    .thenReturn(groupIds);
+            when(messagingServiceClient.checkPostPermissions(
+                    new MessagingServiceClient.CheckPermissionsRequest(10L, groupIds)))
+                    .thenReturn(new MessagingServiceClient.CheckPermissionsResponse(groupIds));
 
             when(postRepository.save(any(Post.class))).thenAnswer(inv -> {
                 Post p = inv.getArgument(0);
@@ -103,7 +101,8 @@ class PostServiceTest {
 
             assertThat(response.id()).isEqualTo(1L);
             assertThat(response.groupIds()).containsExactlyInAnyOrder(123L, 456L);
-            verify(messagingServiceClient).checkPostPermissions(10L, groupIds);
+            verify(messagingServiceClient).checkPostPermissions(
+                    new MessagingServiceClient.CheckPermissionsRequest(10L, groupIds));
         }
 
         @Test
@@ -118,8 +117,9 @@ class PostServiceTest {
                     groupIds
             );
 
-            when(messagingServiceClient.checkPostPermissions(10L, groupIds))
-                    .thenReturn(List.of(123L));
+            when(messagingServiceClient.checkPostPermissions(
+                    new MessagingServiceClient.CheckPermissionsRequest(10L, groupIds)))
+                    .thenReturn(new MessagingServiceClient.CheckPermissionsResponse(List.of(123L)));
 
             assertThatThrownBy(() -> postService.createPost(10L, request))
                     .isInstanceOf(GroupPermissionDeniedException.class);

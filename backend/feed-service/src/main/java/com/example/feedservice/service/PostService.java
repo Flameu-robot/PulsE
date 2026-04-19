@@ -160,7 +160,9 @@ public class PostService {
     }
 
     private void publishToGroups(Post post, Long authorId, List<Long> groupIds) {
-        List<Long> allowedGroupIds = messagingServiceClient.checkPostPermissions(authorId, groupIds);
+        List<Long> allowedGroupIds = messagingServiceClient
+                .checkPostPermissions(new MessagingServiceClient.CheckPermissionsRequest(authorId, groupIds))
+                .allowedGroupIds();
 
         if (allowedGroupIds.size() != groupIds.size()) {
             var deniedIds = new ArrayList<>(groupIds);

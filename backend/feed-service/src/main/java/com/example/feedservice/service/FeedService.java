@@ -98,7 +98,9 @@ public class FeedService {
 
     @Transactional(readOnly = true)
     public PagedResponse<PostResponse> getGroupsFeed(Long userId, Pageable pageable) {
-        List<Long> userGroupIds = messagingServiceClient.getUserGroupIds(userId);
+        List<Long> userGroupIds = messagingServiceClient
+                .getUserGroupIds(userId)
+                .groupIds();
 
         if (userGroupIds.isEmpty()) {
             return PagedResponse.from(Page.empty(pageable));

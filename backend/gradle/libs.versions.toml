@@ -67,7 +67,7 @@ testcontainers-junit                        = { group = "org.testcontainers", na
 testcontainers-postgresql                   = { group = "org.testcontainers", name = "postgresql",     version.ref = "testcontainers" }
 testcontainers-kafka                        = { group = "org.testcontainers", name = "kafka",          version.ref = "testcontainers" }
 reactor-test                                = { group = "io.projectreactor", name = "reactor-test" }
-
+spring-cloud-starter-openfeign              = { group = "org.springframework.cloud", name = "spring-cloud-starter-openfeign" }
 
 [bundles]
 spring-base = [

@@ -13,12 +13,19 @@ java {
 	}
 }
 
+dependencyManagement {
+	imports {
+		mavenBom(libs.spring.cloud.dependencies.get().toString())
+	}
+}
+
 dependencies {
 
 	implementation(libs.bundles.spring.base)
 	implementation(libs.bundles.spring.security)
 	implementation(libs.bundles.database)
 	implementation(libs.bundles.kafka)
+	implementation(libs.spring.cloud.starter.openfeign)
 
 	implementation(libs.spring.boot.starter.data.jpa)
 	implementation(libs.spring.boot.starter.data.redis)

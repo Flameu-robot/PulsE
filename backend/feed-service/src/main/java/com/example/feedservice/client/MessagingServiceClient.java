@@ -1,65 +1,67 @@
 package com.example.feedservice.client;
 
 import com.example.feedservice.config.AppProperties;
+import feign.RequestInterceptor;
+import feign.codec.ErrorDecoder;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Component;
-import org.springframework.web.client.RestClient;
-import org.springframework.web.client.RestClientException;
+import org.springframework.cloud.openfeign.FeignClient;
+import org.springframework.context.annotation.Bean;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 
 import java.util.List;
 
-@Slf4j
-@Component
-public class MessagingServiceClient {
+@FeignClient(
+        name = "messaging-service",
+        url = "${app.services.messaging-url}",
+        configuration = MessagingServiceClient.FeignConfig.class,
+        fallback = MessagingServiceClient.Fallback.class
+)
+public interface MessagingServiceClient {
 
-    private final RestClient restClient;
+    @PostMapping("/internal/groups/check-post-permissions")
+    CheckPermissionsResponse checkPostPermissions(@RequestBody CheckPermissionsRequest request);
 
-    public MessagingServiceClient(AppProperties appProperties) {
-        this.restClient = RestClient.builder()
-                .baseUrl(appProperties.services().messagingUrl())
-                .defaultHeader(
-                        appProperties.internalSecurity().headerName(),
-                        appProperties.internalSecurity().token()
-                )
-                .build();
-    }
+    @GetMapping("/internal/users/{userId}/groups")
+    UserGroupsResponse getUserGroupIds(@PathVariable("userId") Long userId);
 
-    public List<Long> checkPostPermissions(Long userId, List<Long> groupIds) {
-        if (groupIds == null || groupIds.isEmpty()) {
-            return List.of();
+    record CheckPermissionsRequest(Long userId, List<Long> groupIds) {}
+    record CheckPermissionsResponse(List<Long> allowedGroupIds) {}
+    record UserGroupsResponse(List<Long> groupIds) {}
+
+    class FeignConfig {
+
+        @Bean
+        public RequestInterceptor internalTokenInterceptor(AppProperties appProperties) {
+            return requestTemplate -> requestTemplate.header(
+                    appProperties.internalSecurity().headerName(),
+                    appProperties.internalSecurity().token()
+            );
         }
 
-        try {
-            var response = restClient.post()
-                    .uri("/internal/groups/check-post-permissions")
-                    .body(new CheckPermissionsRequest(userId, groupIds))
-                    .retrieve()
-                    .body(CheckPermissionsResponse.class);
-
-            return response != null ? response.allowedGroupIds() : List.of();
-
-        } catch (RestClientException e) {
-            log.error("Failed to check group permissions for user {}: {}", userId, e.getMessage());
-            return List.of();
-        }
-    }
-
-    public List<Long> getUserGroupIds(Long userId) {
-        try {
-            var response = restClient.get()
-                    .uri("/internal/users/{userId}/groups", userId)
-                    .retrieve()
-                    .body(UserGroupsResponse.class);
-
-            return response != null ? response.groupIds() : List.of();
-
-        } catch (RestClientException e) {
-            log.error("Failed to get groups for user {}: {}", userId, e.getMessage());
-            return List.of();
+        @Bean
+        public ErrorDecoder errorDecoder() {
+            return (methodKey, response) -> new RuntimeException(
+                    "messaging-service error on " + methodKey + ": status " + response.status()
+            );
         }
     }
 
-    public record CheckPermissionsRequest(Long userId, List<Long> groupIds) {}
-    public record CheckPermissionsResponse(List<Long> allowedGroupIds) {}
-    public record UserGroupsResponse(List<Long> groupIds) {}
+    @Slf4j
+    class Fallback implements MessagingServiceClient {
+
+        @Override
+        public CheckPermissionsResponse checkPostPermissions(CheckPermissionsRequest request) {
+            log.error("Fallback: checkPostPermissions failed for user {}", request.userId());
+            return new CheckPermissionsResponse(List.of());
+        }
+
+        @Override
+        public UserGroupsResponse getUserGroupIds(Long userId) {
+            log.error("Fallback: getUserGroupIds failed for user {}", userId);
+            return new UserGroupsResponse(List.of());
+        }
+    }
 }

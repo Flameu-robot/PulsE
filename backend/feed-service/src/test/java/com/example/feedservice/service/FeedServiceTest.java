@@ -162,7 +162,8 @@ class FeedServiceTest {
             Long userId = 1L;
             var groupIds = List.of(123L, 456L);
 
-            when(messagingServiceClient.getUserGroupIds(userId)).thenReturn(groupIds);
+            when(messagingServiceClient.getUserGroupIds(userId))
+                    .thenReturn(new MessagingServiceClient.UserGroupsResponse(groupIds));
 
             Post post = buildPostWithGroup(10L, 2L, 123L);
             when(postRepository.findByGroupIds(eq(groupIds), any()))
@@ -183,7 +184,8 @@ class FeedServiceTest {
         @Test
         @DisplayName("should return empty when user has no groups")
         void shouldReturnEmptyWhenNoGroups() {
-            when(messagingServiceClient.getUserGroupIds(1L)).thenReturn(List.of());
+            when(messagingServiceClient.getUserGroupIds(1L))
+                    .thenReturn(new MessagingServiceClient.UserGroupsResponse(List.of()));
 
             PagedResponse<PostResponse> result = feedService.getGroupsFeed(1L, Pageable.ofSize(20));
 
